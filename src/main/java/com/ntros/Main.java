@@ -24,8 +24,6 @@ public class Main {
     int priceBound = 5;
     int maxClientDollars = 10_000;
 
-    /// setup file logging
-
     Market market = main.buildMarket(productCount, priceBound);
     List<Client> clients = main.buildClients(clientCount, maxClientDollars);
     main.seedPortfolios(clients, new ArrayList<>(market.getAvailableProducts()));

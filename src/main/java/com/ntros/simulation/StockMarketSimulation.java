@@ -9,6 +9,7 @@ import static com.ntros.MarketUtils.PRICE_SENSITIVITY_CENTS;
 import static com.ntros.simulation.model.Side.BUY;
 import static com.ntros.simulation.model.Side.SELL;
 
+import com.ntros.simulation.control.SimulationControl;
 import com.ntros.simulation.model.Account;
 import com.ntros.simulation.model.Client;
 import com.ntros.simulation.model.Market;
@@ -50,10 +51,11 @@ public class StockMarketSimulation {
   private static final int SETTLERS = 3;
   private static final int PRICERS = 3;
 
+  private final SimulationControl control;
+
   // data
   private final Market market;
   private final List<Client> clients;
-  // TODO: partition products equally between pricers
   private final List<Product> availableProducts;
   private final List<Map<Integer, PriceFlow>> priceFlowPartitions = new ArrayList<>();
 
@@ -109,7 +111,23 @@ public class StockMarketSimulation {
       priceFlowPartitions.get(x % PRICERS).put(entry.getKey(), entry.getValue());
       x++;
     }
+    // TODO: add storage at some point
+    var settings = new SimulationSettings(SEEDERS, PLACERS, SETTLERS, PRICERS, false);
+    var context =
+        new SimulationContext(
+            clients,
+            availableProducts,
+            priceFlows,
+            priceFlowPartitions,
+            clientLocks,
+            pricingLocks,
+            seeded,
+            placements,
+            topMovers,
+            settledCount);
+    control = new SimulationControl(settings, context);
 
+    /// Remove everything below
     // init threads
     seeders = new Thread[SEEDERS];
     for (int i = 0; i < SEEDERS; i++) {
@@ -286,10 +304,6 @@ public class StockMarketSimulation {
         Thread.currentThread().interrupt();
       }
     }
-  }
-
-  private int productReservationChance(float chance, int min, int max) {
-    return RNG.nextFloat() >= chance ? RNG.nextInt(min, max) : 1;
   }
 
   /**
