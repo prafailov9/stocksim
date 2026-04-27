@@ -8,10 +8,10 @@ import com.ntros.simulation.SimulationContext;
 import com.ntros.simulation.control.CancellationToken;
 import com.ntros.simulation.model.Account;
 import com.ntros.simulation.model.Holding;
-import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.model.Order;
 import com.ntros.simulation.model.PriceFlow;
 import com.ntros.simulation.model.Product;
+import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.queue.LinkedBoundedQueue;
 import com.ntros.simulation.stage.AbstractSimulationStage;
 import java.util.ArrayList;
@@ -154,10 +154,12 @@ public class OrderingStage extends AbstractSimulationStage {
         }
         // get total
         long totalPrice = 0L;
+        long snapshotPrice = 0L; // price per share at placement time
         for (var product : orderedProducts) {
           synchronized (pricingLocks.get(product.getId() - 1)) {
             // TODO: add fee
-            totalPrice += product.getPrice() * order.getQuantity();
+            snapshotPrice = product.getPrice();
+            totalPrice += snapshotPrice * order.getQuantity();
           }
         }
 
@@ -176,19 +178,27 @@ public class OrderingStage extends AbstractSimulationStage {
               trader.getAccount().increaseReservedBalance(totalPrice);
               validatedOrder.addAllProducts(orderedProducts);
               validatedOrder.setQuantity(order.getQuantity());
+              validatedOrder.setOrderPrice(snapshotPrice); // snapshot at placement time
+
             } else {
               // try partial buy
               long partialPrice = 0L;
               // TODO: partial qty logic, should be based off of affordable shares
-              long partialQuantity = 0L;
+              long affordableShares = 0L;
               for (var ordered : orderedProducts) {
-                long nextPrice = partialPrice + ordered.getPrice();
+                long pricePerShare = ordered.getPrice();
+                long maxAffordableShares = availableBalance / pricePerShare;
+                if (maxAffordableShares == 0) {
+                  continue;
+                }
+                long sharesToBuy = Math.min(order.getQuantity(), maxAffordableShares);
+                long cost = sharesToBuy * pricePerShare;
 
-                if (nextPrice <= availableBalance
-                    && availableBalance - nextPrice >= MIN_ALLOWED_CENTS) {
-                  partialPrice = nextPrice;
+                if (availableBalance - cost >= MIN_ALLOWED_CENTS) {
+                  partialPrice += cost;
+                  affordableShares = sharesToBuy;
                   validatedOrder.addProduct(ordered);
-                  validatedOrder.setQuantity(++partialQuantity);
+                  validatedOrder.setOrderPrice(pricePerShare);
                 }
               }
               // partial buy failed - skip
@@ -204,6 +214,7 @@ public class OrderingStage extends AbstractSimulationStage {
               }
               trader.getAccount().decreaseAvailableBalance(partialPrice);
               trader.getAccount().increaseReservedBalance(partialPrice);
+              validatedOrder.setQuantity(affordableShares);
             }
           } else { // SELL branch
             // check ordered against owned, only allow once who match
@@ -220,9 +231,17 @@ public class OrderingStage extends AbstractSimulationStage {
                 if (currentQty < qtyToSell) {
                   qtyToSell = 1;
                 }
+
+                // snapshot current price at placement time
+                long sellPrice;
+                synchronized (pricingLocks.get(ordered.getId() - 1)) {
+                  sellPrice = ordered.getPrice();
+                }
+
                 // reserve
                 trader.getAccount().getPortfolio().decreaseHoldingQuantity(ordered, qtyToSell);
                 validatedOrder.setQuantity(qtyToSell);
+                validatedOrder.setOrderPrice(sellPrice); // snapshot
                 validatedOrder.addProduct(ordered);
               }
             }

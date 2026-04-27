@@ -42,7 +42,6 @@ public class Order {
   public void addProduct(Product product) {
     validateProduct(product);
     products.add(product);
-    orderPrice += product.getPrice();
   }
 
   public long getQuantity() {
@@ -61,30 +60,14 @@ public class Order {
     return orderPrice * quantity;
   }
 
+  public void setOrderPrice(long orderPrice) {
+    this.orderPrice = orderPrice;
+
+  }
+
   public void addAllProducts(List<Product> p) {
     p.forEach(this::validateProduct);
     products.addAll(p);
-    p.forEach(x -> orderPrice += x.getPrice());
-  }
-
-  public void removeProduct(Product product) {
-    validateProduct(product);
-    products.remove(product);
-    orderPrice -= product.getPrice();
-  }
-
-  public void removeAllProducts(List<Product> p) {
-    p.forEach(this::validateProduct);
-    products.removeAll(p);
-    for (var product : p) {
-      if (orderPrice - product.getPrice() > MIN_ORDER_PRICE) {
-        orderPrice -= product.getPrice();
-      } else {
-        // log
-        System.out.printf("cannot remove product from order list: %s%n", p);
-        break;
-      }
-    }
   }
 
   @Override
