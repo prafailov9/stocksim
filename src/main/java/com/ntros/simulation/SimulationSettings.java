@@ -1,4 +1,4 @@
 package com.ntros.simulation;
 
 public record SimulationSettings(
-    int seeders, int placers, int settlers, int pricers, boolean canStore) {}
+    int generators, int placers, int processors, int pricers, boolean canStore) {}

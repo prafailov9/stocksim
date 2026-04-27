@@ -20,9 +20,9 @@ public class StockMarketSimulation {
   private static final int MAX_ALLOWED_ORDERS = 10_000_000;
   private static final int MAX_TOP_MOVERS = 10;
 
-  private static final int SEEDERS = 3;
+  private static final int GENERATORS = 3;
   private static final int PLACERS = 3;
-  private static final int SETTLERS = 3;
+  private static final int PROCESSORS = 3;
   private static final int PRICERS = 3;
 
   private final SimulationControl control;
@@ -56,7 +56,7 @@ public class StockMarketSimulation {
     }
 
     // TODO: add storage at some point
-    var settings = new SimulationSettings(SEEDERS, PLACERS, SETTLERS, PRICERS, false);
+    var settings = new SimulationSettings(GENERATORS, PLACERS, PROCESSORS, PRICERS, false);
 
     var context =
         new SimulationContext(

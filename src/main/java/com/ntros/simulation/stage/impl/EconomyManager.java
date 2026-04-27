@@ -37,7 +37,7 @@ public class EconomyManager extends AbstractSimulationStage {
         }
         for (int i = 0; i < traders.size(); i++) {
           ReentrantLock lock = clientLocks.get(i);
-          // skip if settler is using this client right now
+          // skip if processor is using this client right now
           if (!lock.tryLock()) {
             continue;
           }

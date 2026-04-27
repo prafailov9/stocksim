@@ -35,9 +35,9 @@ public class OrderPipeline extends AbstractSimulationStage {
   private final List<Trader> traders;
   private final List<ReentrantLock> clientLocks;
   private final List<Object> pricingLocks;
-  private final LinkedBoundedQueue<Order> seededOrders;
+  private final LinkedBoundedQueue<Order> generatedOrders;
   private final LinkedBoundedQueue<Order> placements;
-  private final AtomicLong settledCount;
+  private final AtomicLong processedCount;
   private final Map<Integer, PriceFlow> priceFlows;
 
   public OrderPipeline(SimulationContext context) {
@@ -46,27 +46,27 @@ public class OrderPipeline extends AbstractSimulationStage {
     traders = context.traders();
     clientLocks = context.clientLocks();
     pricingLocks = context.pricingLocks();
-    seededOrders = context.seeded();
+    generatedOrders = context.generatedOrders();
     placements = context.placements();
-    settledCount = context.settledCount();
+    processedCount = context.processedCount();
     priceFlows = context.priceFlows();
   }
 
-  public void seedPoison() throws InterruptedException {
-    seededOrders.put(POISON);
+  public void poisonGenerators() throws InterruptedException {
+    generatedOrders.put(POISON);
   }
 
-  public void placePoison() throws InterruptedException {
+  public void poisonPlacers() throws InterruptedException {
     placements.put(POISON);
   }
 
-  // seeds an order each pass
-  public Runnable seeding(CancellationToken cancellationToken) {
+  // generates an order each pass
+  public Runnable generate(CancellationToken cancellationToken) {
     return () -> {
       while (!cancellationToken.isCancelled()) {
         // get market products as list from set
 
-        // init order and add to seeded store
+        // init order and add to generatedOrders store
         var trader = traders.get(RNG.nextInt(traders.size()));
         var side = RNG.nextFloat() < 0.50f ? BUY : SELL;
         Set<Product> validatedProducts = new HashSet<>();
@@ -118,7 +118,7 @@ public class OrderPipeline extends AbstractSimulationStage {
         order.addAllProducts(new ArrayList<>(validatedProducts));
         order.setQuantity(qty);
         try {
-          seededOrders.put(order);
+          generatedOrders.put(order);
         } catch (InterruptedException ex) {
           Thread.currentThread().interrupt();
         }
@@ -131,7 +131,7 @@ public class OrderPipeline extends AbstractSimulationStage {
       while (true) {
         Order order;
         try {
-          order = seededOrders.take();
+          order = generatedOrders.take();
         } catch (InterruptedException ex) {
           Thread.currentThread().interrupt();
           break;
@@ -263,7 +263,7 @@ public class OrderPipeline extends AbstractSimulationStage {
     };
   }
 
-  public Runnable settling() {
+  public Runnable processing() {
     return () -> {
       // poison pill handles control
       while (true) {
@@ -306,7 +306,7 @@ public class OrderPipeline extends AbstractSimulationStage {
         } finally {
           clientLock.unlock();
         }
-        settledCount.incrementAndGet();
+        processedCount.incrementAndGet();
 
         // adjust price flow for product
         for (var p : order.getProducts()) {

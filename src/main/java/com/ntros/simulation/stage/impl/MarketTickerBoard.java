@@ -13,14 +13,13 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class MarketTickerBoard extends AbstractSimulationStage {
   private static final int TICKER_TIMESTEP_MS = 2000;
-  private static final String NAME = "MarketDisplayStage";
   private final BoundedMinHeap<PriceFlow> topMovers;
-  private final AtomicLong settledCount;
+  private final AtomicLong processedCount;
 
   public MarketTickerBoard(SimulationContext context) {
     super(context);
     topMovers = context.topMovers();
-    settledCount = context.settledCount();
+    processedCount = context.processedCount();
   }
 
   public Runnable displayMarketState() {
@@ -90,7 +89,7 @@ public class MarketTickerBoard extends AbstractSimulationStage {
               arrow);
         }
         // footer
-        System.out.printf("%n  Total settled orders: %d%n", settledCount.get());
+        System.out.printf("%n  Total processed orders: %d%n", processedCount.get());
       }
     };
   }

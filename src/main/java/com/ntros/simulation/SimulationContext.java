@@ -1,9 +1,9 @@
 package com.ntros.simulation;
 
-import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.model.Order;
 import com.ntros.simulation.model.PriceFlow;
 import com.ntros.simulation.model.Product;
+import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.queue.BoundedMinHeap;
 import com.ntros.simulation.queue.LinkedBoundedQueue;
 import java.util.List;
@@ -18,7 +18,7 @@ public record SimulationContext(
     List<Map<Integer, PriceFlow>> priceFlowPartitions,
     List<ReentrantLock> clientLocks,
     List<Object> pricingLocks,
-    LinkedBoundedQueue<Order> seeded,
+    LinkedBoundedQueue<Order> generatedOrders,
     LinkedBoundedQueue<Order> placements,
     BoundedMinHeap<PriceFlow> topMovers,
-    AtomicLong settledCount) {}
+    AtomicLong processedCount) {}

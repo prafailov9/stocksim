@@ -13,9 +13,9 @@ public class SimulationControl implements Control {
   private final MarketTickerBoard display;
   private final EconomyManager economy;
 
-  private final Thread[] seeders;
+  private final Thread[] generators;
   private final Thread[] placers;
-  private final Thread[] settlers;
+  private final Thread[] processors;
   private final Thread[] pricers;
   private final Thread ticker;
   private final Thread economist;
@@ -35,9 +35,9 @@ public class SimulationControl implements Control {
     economy = new EconomyManager(context);
 
     // init threads
-    seeders = new Thread[settings.seeders()];
-    for (int i = 0; i < settings.seeders(); i++) {
-      seeders[i] = new Thread(ordering.seeding(token), "t-seeder-" + i);
+    generators = new Thread[settings.generators()];
+    for (int i = 0; i < settings.generators(); i++) {
+      generators[i] = new Thread(ordering.generate(token), "t-generator-" + i);
     }
 
     placers = new Thread[settings.placers()];
@@ -45,9 +45,9 @@ public class SimulationControl implements Control {
       placers[i] = new Thread(ordering.placing(), "t-placer-" + i);
     }
 
-    settlers = new Thread[settings.settlers()];
-    for (int i = 0; i < settings.settlers(); i++) {
-      settlers[i] = new Thread(ordering.settling(), "t-settler-" + i);
+    processors = new Thread[settings.processors()];
+    for (int i = 0; i < settings.processors(); i++) {
+      processors[i] = new Thread(ordering.processing(), "t-processor-" + i);
     }
 
     pricers = new Thread[settings.pricers()];
@@ -57,15 +57,15 @@ public class SimulationControl implements Control {
               pricing.updatePrices(token, context.priceFlowPartitions().get(i)), "t-pricer-" + i);
     }
 
-    ticker = new Thread(display.displayMarketState(), "t-ticker-0");
-    economist = new Thread(economy.manageEconomy(), "t-economist-0");
+    ticker = new Thread(display.displayMarketState(), "t-ticker-1");
+    economist = new Thread(economy.manageEconomy(), "t-economist-1");
   }
 
   @Override
   public void start() {
-    for (var t : seeders) t.start();
+    for (var t : generators) t.start();
     for (var t : placers) t.start();
-    for (var t : settlers) t.start();
+    for (var t : processors) t.start();
     for (var t : pricers) t.start();
     ticker.start();
     economist.start();
@@ -82,7 +82,7 @@ public class SimulationControl implements Control {
 
   /// 1. Shutdown Ordering Stage
   private void stopOrdering() {
-    for (var t : seeders) {
+    for (var t : generators) {
       try {
         t.join();
       } catch (InterruptedException e) {
@@ -92,7 +92,7 @@ public class SimulationControl implements Control {
     // send poison pill to placers
     for (int i = 0; i < settings.placers(); i++) {
       try {
-        ordering.seedPoison();
+        ordering.poisonGenerators();
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
@@ -108,16 +108,16 @@ public class SimulationControl implements Control {
     }
 
     // once producer joining is done, nothing writes to the queue anymore: send poison pill
-    for (int i = 0; i < settings.settlers(); i++) {
+    for (int i = 0; i < settings.processors(); i++) {
       try {
-        ordering.placePoison();
+        ordering.poisonPlacers();
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
     }
 
     // wait for still-consumers to drain the queue and exit
-    for (var t : settlers) {
+    for (var t : processors) {
       try {
         t.join();
       } catch (InterruptedException e) {

@@ -14,12 +14,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 
-public class Seeder {
+public class Generator {
   private static final Random RNG = new Random();
   private static final long EXPONENT = 100L;
 
-  /// Seeders
-  static Market seedMarket(int products, int priceBound) {
+  static Market generateMarket(int products, int priceBound) {
     Market market = new Market("BIG_CHIEFIN");
 
     for (int i = 1; i <= products; i++) {
@@ -31,7 +30,7 @@ public class Seeder {
   }
 
   // generates its own buying power
-  static List<Trader> seedTraders(int total) {
+  static List<Trader> generateTraders(int total) {
     List<Trader> traders = new ArrayList<>();
 
     for (int i = 1; i <= total; i++) {
@@ -46,7 +45,7 @@ public class Seeder {
     return traders;
   }
 
-  static void seedPortfolios(List<Trader> traders, List<Product> products) {
+  static void generatePortfolios(List<Trader> traders, List<Product> products) {
     for (var trader : traders) {
       InitialWealthTier tier = trader.getWealthTier();
 
