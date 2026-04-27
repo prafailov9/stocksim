@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class EconomyManagementStage extends AbstractSimulationStage {
+public class EconomyManager extends AbstractSimulationStage {
   private final Random RNG = new Random();
   private static final int BALANCE_CHECK_TIMESTEP_MS = 1000;
   private static final long BALANCE_FLOOR_CENTS = 5_000_000L;
@@ -19,7 +19,7 @@ public class EconomyManagementStage extends AbstractSimulationStage {
   private final List<Trader> traders;
   private final List<ReentrantLock> clientLocks;
 
-  public EconomyManagementStage(SimulationContext context) {
+  public EconomyManager(SimulationContext context) {
     super(context);
     availableProducts = context.availableProducts();
     traders = context.traders();

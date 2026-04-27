@@ -2,16 +2,16 @@ package com.ntros.simulation.control;
 
 import com.ntros.simulation.SimulationContext;
 import com.ntros.simulation.SimulationSettings;
-import com.ntros.simulation.stage.impl.EconomyManagementStage;
-import com.ntros.simulation.stage.impl.TickingStage;
-import com.ntros.simulation.stage.impl.OrderingStage;
-import com.ntros.simulation.stage.impl.PricingStage;
+import com.ntros.simulation.stage.impl.EconomyManager;
+import com.ntros.simulation.stage.impl.MarketTickerBoard;
+import com.ntros.simulation.stage.impl.OrderPipeline;
+import com.ntros.simulation.stage.impl.PricingCycle;
 
 public class SimulationControl implements Control {
-  private final OrderingStage ordering;
-  private final PricingStage pricing;
-  private final TickingStage display;
-  private final EconomyManagementStage economy;
+  private final OrderPipeline ordering;
+  private final PricingCycle pricing;
+  private final MarketTickerBoard display;
+  private final EconomyManager economy;
 
   private final Thread[] seeders;
   private final Thread[] placers;
@@ -29,10 +29,10 @@ public class SimulationControl implements Control {
     this.context = context;
 
     // init stages
-    ordering = new OrderingStage(context);
-    pricing = new PricingStage(context);
-    display = new TickingStage(context);
-    economy = new EconomyManagementStage(context);
+    ordering = new OrderPipeline(context);
+    pricing = new PricingCycle(context);
+    display = new MarketTickerBoard(context);
+    economy = new EconomyManager(context);
 
     // init threads
     seeders = new Thread[settings.seeders()];

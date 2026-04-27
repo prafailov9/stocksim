@@ -25,9 +25,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class OrderingStage extends AbstractSimulationStage {
+public class OrderPipeline extends AbstractSimulationStage {
 
-  private static final Logger log = LoggerFactory.getLogger(OrderingStage.class);
+  private static final Logger log = LoggerFactory.getLogger(OrderPipeline.class);
   private final Random RNG = new Random();
   private static final Order POISON = new Order(null, null);
 
@@ -40,7 +40,7 @@ public class OrderingStage extends AbstractSimulationStage {
   private final AtomicLong settledCount;
   private final Map<Integer, PriceFlow> priceFlows;
 
-  public OrderingStage(SimulationContext context) {
+  public OrderPipeline(SimulationContext context) {
     super(context);
     products = context.availableProducts();
     traders = context.traders();

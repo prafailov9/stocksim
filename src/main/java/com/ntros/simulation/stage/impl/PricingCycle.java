@@ -13,13 +13,13 @@ import com.ntros.simulation.stage.AbstractSimulationStage;
 import java.util.List;
 import java.util.Map;
 
-public class PricingStage extends AbstractSimulationStage {
+public class PricingCycle extends AbstractSimulationStage {
   private static final long PRICER_TIMESTEP_MS = 1_000;
   private final List<Object> pricingLocks;
   private final List<Product> availableProducts;
   private final BoundedMinHeap<PriceFlow> topMovers;
 
-  public PricingStage(SimulationContext context) {
+  public PricingCycle(SimulationContext context) {
     super(context);
     pricingLocks = context.pricingLocks();
     availableProducts = context.availableProducts();
