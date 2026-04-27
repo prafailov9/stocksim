@@ -60,16 +60,10 @@ public class StockMarketSimulation {
       priceFlowPartitions.get(x % PRICERS).put(entry.getKey(), entry.getValue());
       x++;
     }
+
     // TODO: add storage at some point
     var settings = new SimulationSettings(SEEDERS, PLACERS, SETTLERS, PRICERS, false);
-    // orders
-    LinkedBoundedQueue<Order> seeded = new LinkedBoundedQueue<>(MAX_ALLOWED_ORDERS);
-    LinkedBoundedQueue<Order> placements = new LinkedBoundedQueue<>(MAX_ALLOWED_ORDERS);
-    BoundedMinHeap<PriceFlow> topMovers =
-        new BoundedMinHeap<>(
-            MAX_TOP_MOVERS, Comparator.comparingLong(flow -> Math.abs(flow.getDelta())));
 
-    AtomicLong settledCount = new AtomicLong(0);
     var context =
         new SimulationContext(
             clients,
@@ -78,10 +72,12 @@ public class StockMarketSimulation {
             priceFlowPartitions,
             clientLocks,
             pricingLocks,
-            seeded,
-            placements,
-            topMovers,
-            settledCount);
+            new LinkedBoundedQueue<>(MAX_ALLOWED_ORDERS),
+            new LinkedBoundedQueue<>(MAX_ALLOWED_ORDERS),
+            new BoundedMinHeap<>(
+                MAX_TOP_MOVERS, Comparator.comparingLong(flow -> Math.abs(flow.getDelta()))),
+            new AtomicLong(0));
+
     control = new SimulationControl(settings, context);
   }
 
