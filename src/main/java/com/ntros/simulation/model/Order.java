@@ -13,7 +13,8 @@ public class Order {
   private final Trader trader;
   private final List<Product> products;
   private final Side side;
-  private long orderPrice = 0;
+  private long quantity;
+  private long orderPrice;
 
   public Order(Trader trader, Side side) {
     id = IdSequencer.nextOrderId();
@@ -22,19 +23,11 @@ public class Order {
     this.side = side;
   }
 
-  public Order(Trader trader, Product product, Side side) {
-    this(trader, side);
-    if (product == null) {
-      throw new IllegalArgumentException("Product cannot be null.");
-    }
-    addProduct(product);
-  }
-
   public int getId() {
     return id;
   }
 
-  public Trader getClient() {
+  public Trader getTrader() {
     return trader;
   }
 
@@ -52,12 +45,20 @@ public class Order {
     orderPrice += product.getPrice();
   }
 
+  public long getQuantity() {
+    return quantity;
+  }
+
+  public void setQuantity(long quantity) {
+    this.quantity = quantity;
+  }
+
   public Side side() {
     return side;
   }
 
   public long getOrderPrice() {
-    return orderPrice;
+    return orderPrice * quantity;
   }
 
   public void addAllProducts(List<Product> p) {
@@ -69,7 +70,7 @@ public class Order {
   public void removeProduct(Product product) {
     validateProduct(product);
     products.remove(product);
-    orderPrice -= (long) product.getPrice();
+    orderPrice -= product.getPrice();
   }
 
   public void removeAllProducts(List<Product> p) {
@@ -91,10 +92,12 @@ public class Order {
     return "Order{"
         + "id="
         + id
+        + ", side="
+        + side.name()
         + ", products="
         + products
         + ", orderPrice="
-        + Money.bucks(orderPrice)
+        + Money.bucks(orderPrice * quantity)
         + '}';
   }
 

@@ -11,11 +11,9 @@ public class MarketUtils {
 
   public static final long MIN_ALLOWED_CENTS = 300;
   public static final long MIN_PRODUCT_PRICE = 1L;
-  public static final long PRICE_SENSITIVITY_CENTS = 2; // max-ish 2% move per window
+  public static final long PRICE_SENSITIVITY_CENTS = 1; // max-ish 1% move per window
 
-  public static final int MIN_PRODUCT_SEEDING_BOUND = 2;
-  public static final int MAX_PRODUCT_SEEDING_BOUND = 5;
-  public static final long MAX_PRICE_MOVE_PCT_CENTS = 10; // safety cap: 10%
+  public static final long MAX_PRICE_MOVE_PCT_CENTS = 3; // safety cap: 3%
 
   private static final double MIN_BUFFER = 1.00;
 

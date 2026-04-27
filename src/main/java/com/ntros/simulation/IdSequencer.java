@@ -43,7 +43,7 @@ public class IdSequencer {
     return ORDER_FLOW_ID_COUNTER.getAndIncrement();
   }
   public static int nextHoldingId() {
-    return ORDER_FLOW_ID_COUNTER.getAndIncrement();
+    return HOLDING_ID_COUNTER.getAndIncrement();
   }
 
 }

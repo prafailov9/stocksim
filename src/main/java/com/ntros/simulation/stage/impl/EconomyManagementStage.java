@@ -46,11 +46,12 @@ public class EconomyManagementStage extends AbstractSimulationStage {
             if (account.getAvailableBalance() < BALANCE_FLOOR_CENTS) {
               account.increaseAvailableBalance(BALANCE_INJECTION_CENTS);
             }
-            if (account.getPortfolio().getProducts().isEmpty()) {
+            if (account.getPortfolio().getHoldings().isEmpty()) {
               int count = RNG.nextInt(1, 6);
               for (int j = 0; j < count; j++) {
-                account.addToPortfolio(
-                    availableProducts.get(RNG.nextInt(availableProducts.size())));
+
+                account.getPortfolio().addHolding(
+                    availableProducts.get(RNG.nextInt(availableProducts.size())), 1);
               }
             }
           } finally {

@@ -14,8 +14,7 @@ import org.slf4j.LoggerFactory;
 /** Hello world! */
 public class Main {
   private static final Logger log = LoggerFactory.getLogger(Main.class);
-
-  private static final Random RNG = new Random();
+  private static final int RUNTIME_MS = 32_000;
 
   public static void main(String[] args) {
     int clientCount = 5_000;
@@ -31,14 +30,15 @@ public class Main {
 
     // start sim
     StockMarketSimulation simulation = new StockMarketSimulation(market, traders);
-    int runtimeMs = 14_000;
+    log.info("Starting sim...");
     simulation.run();
     try {
-      Thread.sleep(runtimeMs);
+      Thread.sleep(RUNTIME_MS);
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
     // stop
     simulation.stop();
+    log.info("Sim stopped");
   }
 }

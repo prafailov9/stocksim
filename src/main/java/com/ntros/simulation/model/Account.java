@@ -1,8 +1,7 @@
 package com.ntros.simulation.model;
 
 import com.ntros.simulation.IdSequencer;
-import java.util.ArrayList;
-import java.util.UUID;
+import java.util.HashMap;
 
 public class Account {
 
@@ -12,35 +11,13 @@ public class Account {
   private final Portfolio portfolio;
 
   public Account(long availableBalance) {
-    id = IdSequencer.nextAccountId();
+    this.id = IdSequencer.nextAccountId();
     this.availableBalance = availableBalance;
-    String portfolioName = "portf-" + UUID.randomUUID().toString().substring(0, 12) + "acc-" + id;
-    portfolio = new Portfolio(portfolioName, new ArrayList<>());
+    this.portfolio = new Portfolio(id, new HashMap<>());
   }
 
   public Portfolio getPortfolio() {
     return portfolio;
-  }
-
-  public boolean ownsAsset(Product product) {
-    return portfolio.getProducts().contains(product);
-  }
-
-  public void addToPortfolio(Product product) {
-    portfolio.addProduct(product);
-  }
-
-  public void addToPortfolio(Product product, long quantity) {
-    portfolio.addProduct(product);
-    portfolio.addHolding(product, quantity);
-  }
-
-  public void removeFromPortfolio(Product product) {
-    if (!portfolio.getProducts().contains(product)) {
-      throw new IllegalArgumentException(
-          String.format("Account %s does not own this product %s", id, product.getCode()));
-    }
-    portfolio.removeProduct(product);
   }
 
   public int getId() {

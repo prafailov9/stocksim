@@ -61,7 +61,7 @@ public class Seeder {
       for (Product product : selectedProducts) {
         long quantity = generateQuantity(tier, product);
         if (quantity > 0) {
-          trader.getAccount().addToPortfolio(product, quantity);
+          trader.getAccount().getPortfolio().addHolding(product, quantity);
         }
       }
     }

@@ -7,6 +7,7 @@ import static com.ntros.simulation.model.Side.SELL;
 import com.ntros.simulation.SimulationContext;
 import com.ntros.simulation.control.CancellationToken;
 import com.ntros.simulation.model.Account;
+import com.ntros.simulation.model.Holding;
 import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.model.Order;
 import com.ntros.simulation.model.PriceFlow;
@@ -14,7 +15,6 @@ import com.ntros.simulation.model.Product;
 import com.ntros.simulation.queue.LinkedBoundedQueue;
 import com.ntros.simulation.stage.AbstractSimulationStage;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -22,9 +22,12 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class OrderingStage extends AbstractSimulationStage {
 
+  private static final Logger log = LoggerFactory.getLogger(OrderingStage.class);
   private final Random RNG = new Random();
   private static final Order POISON = new Order(null, null);
 
@@ -32,7 +35,7 @@ public class OrderingStage extends AbstractSimulationStage {
   private final List<Trader> traders;
   private final List<ReentrantLock> clientLocks;
   private final List<Object> pricingLocks;
-  private final LinkedBoundedQueue<Order> seeded;
+  private final LinkedBoundedQueue<Order> seededOrders;
   private final LinkedBoundedQueue<Order> placements;
   private final AtomicLong settledCount;
   private final Map<Integer, PriceFlow> priceFlows;
@@ -43,61 +46,79 @@ public class OrderingStage extends AbstractSimulationStage {
     traders = context.traders();
     clientLocks = context.clientLocks();
     pricingLocks = context.pricingLocks();
-    seeded = context.seeded();
+    seededOrders = context.seeded();
     placements = context.placements();
     settledCount = context.settledCount();
     priceFlows = context.priceFlows();
   }
 
   public void seedPoison() throws InterruptedException {
-    seeded.put(POISON);
+    seededOrders.put(POISON);
   }
 
   public void placePoison() throws InterruptedException {
     placements.put(POISON);
   }
 
+  // seeds an order each pass
   public Runnable seeding(CancellationToken cancellationToken) {
     return () -> {
       while (!cancellationToken.isCancelled()) {
         // get market products as list from set
 
         // init order and add to seeded store
-        var client = traders.get(RNG.nextInt(traders.size()));
+        var trader = traders.get(RNG.nextInt(traders.size()));
         var side = RNG.nextFloat() < 0.50f ? BUY : SELL;
-        int productsToBuy = 1;
-        //          productReservationChance(0.99f, MIN_PRODUCT_SEEDING_BOUND,
-        // MAX_PRODUCT_SEEDING_BOUND);
         Set<Product> validatedProducts = new HashSet<>();
-        // fix side bias by seeding sell orders from client's portfolio
+        long qty;
+        // single order each pass for simplicity, maybe expand later
         if (side == BUY) {
-          // product creation chance: x% of the time, an order with only 1 product will be generated
-
-          // generate random products
-          while (validatedProducts.size() < productsToBuy) {
-            validatedProducts.add(products.get(RNG.nextInt(products.size())));
-          }
+          var product = products.get(RNG.nextInt(products.size()));
+          validatedProducts.add(product);
+          // determine qty from trader's current spending balance
+          long price = product.getPrice();
+          long affordableShares = trader.getAccount().getAvailableBalance() / price;
+          long sharesToBuy =
+              affordableShares > 0
+                  ? RNG.nextLong(1, Math.min(affordableShares, 100) + 1)
+                  : 1; // cap qty at 100
+          qty = sharesToBuy;
         } else { // SELLS
-          List<Product> owned;
-          ReentrantLock clientLock = clientLocks.get(client.getId() - 1);
+          Map<Product, Holding> ownedHoldings;
+          List<Product> ownedProducts;
+          ReentrantLock clientLock = clientLocks.get(trader.getId() - 1);
           clientLock.lock();
           try {
-            owned = new ArrayList<>(client.getAccount().getPortfolio().getProducts());
+            ownedHoldings = trader.getAccount().getPortfolio().getHoldings();
+            ownedProducts = new ArrayList<>(ownedHoldings.keySet());
           } finally {
             clientLock.unlock();
           }
-          if (owned.isEmpty()) {
+          // if trader owns nothing - skip
+          if (ownedHoldings.isEmpty()) {
             continue;
           } else {
-            // add only one sell order per cycle
-            validatedProducts.add(owned.get(RNG.nextInt(owned.size())));
+            // add only one single-product, sell order per cycle, with varying quantities to sell,
+            // avg less than 1/3 of total holding
+
+            var randomProduct = ownedProducts.get(RNG.nextInt(ownedProducts.size()));
+            var holding = trader.getAccount().getPortfolio().getHoldings().get(randomProduct);
+            long productQuantity = holding != null ? holding.getQuantity() : 0;
+            if (productQuantity == 0) continue;
+
+            var sellQtyCap = Math.max(1L, productQuantity / 3L);
+            var qtyToSell = RNG.nextLong(1, sellQtyCap + 1);
+
+            // select random holding
+            validatedProducts.add(randomProduct);
+            qty = qtyToSell;
           }
         }
-
-        Order order = new Order(client, side);
+        Order order = new Order(trader, side);
         order.addAllProducts(new ArrayList<>(validatedProducts));
+        order.setQuantity(qty);
         try {
-          seeded.put(order);
+          seededOrders.put(order);
         } catch (InterruptedException ex) {
           Thread.currentThread().interrupt();
         }
@@ -110,7 +131,7 @@ public class OrderingStage extends AbstractSimulationStage {
       while (true) {
         Order order;
         try {
-          order = seeded.take();
+          order = seededOrders.take();
         } catch (InterruptedException ex) {
           Thread.currentThread().interrupt();
           break;
@@ -120,49 +141,54 @@ public class OrderingStage extends AbstractSimulationStage {
         }
         // poison pill check, any placer receiving a null client will exit before placing a new
         // order
-        if (order.getClient() == null) {
+        if (order.getTrader() == null) {
           break;
         }
         // get market products as list from set
         List<Product> orderedProducts = order.getProducts();
-        var client = order.getClient();
-
-        // get prices, total
-        Map<Integer, Long> prices = new HashMap<>();
+        var trader = order.getTrader();
+        // discard order if no quantity
+        if (order.getQuantity() == 0) {
+          log.info("no qty for order: {}", order);
+          continue;
+        }
+        // get total
         long totalPrice = 0L;
         for (var product : orderedProducts) {
           synchronized (pricingLocks.get(product.getId() - 1)) {
             // TODO: add fee
-            prices.put(product.getId(), product.getPrice());
-            totalPrice += product.getPrice();
+            totalPrice += product.getPrice() * order.getQuantity();
           }
         }
 
         var side = order.getSide();
-        int clientIdx = order.getClient().getId() - 1;
-        var validatedOrder = new Order(client, side);
-        // for [BUY] orders, check if client has enough money
-        // for [SELL] orders, if client owns the product
+        int clientIdx = order.getTrader().getId() - 1;
+        var validatedOrder = new Order(trader, side);
         ReentrantLock clientLock = clientLocks.get(clientIdx);
         clientLock.lock();
         try {
           if (side.equals(BUY)) {
-            long availableBalance = client.getAccount().getAvailableBalance();
+            long availableBalance = trader.getAccount().getAvailableBalance();
             // try full buy
             if (availableBalance > totalPrice
                 && availableBalance - totalPrice >= MIN_ALLOWED_CENTS) {
-              client.getAccount().decreaseAvailableBalance(totalPrice);
-              client.getAccount().increaseReservedBalance(totalPrice);
+              trader.getAccount().decreaseAvailableBalance(totalPrice);
+              trader.getAccount().increaseReservedBalance(totalPrice);
               validatedOrder.addAllProducts(orderedProducts);
+              validatedOrder.setQuantity(order.getQuantity());
             } else {
               // try partial buy
               long partialPrice = 0L;
+              // TODO: partial qty logic, should be based off of affordable shares
+              long partialQuantity = 0L;
               for (var ordered : orderedProducts) {
                 long nextPrice = partialPrice + ordered.getPrice();
+
                 if (nextPrice <= availableBalance
                     && availableBalance - nextPrice >= MIN_ALLOWED_CENTS) {
                   partialPrice = nextPrice;
                   validatedOrder.addProduct(ordered);
+                  validatedOrder.setQuantity(++partialQuantity);
                 }
               }
               // partial buy failed - skip
@@ -176,20 +202,27 @@ public class OrderingStage extends AbstractSimulationStage {
                 //                  Money.bucks(availableBalance));
                 continue;
               }
-              client.getAccount().decreaseAvailableBalance(partialPrice);
-              client.getAccount().increaseReservedBalance(partialPrice);
+              trader.getAccount().decreaseAvailableBalance(partialPrice);
+              trader.getAccount().increaseReservedBalance(partialPrice);
             }
-          } else {
+          } else { // SELL branch
             // check ordered against owned, only allow once who match
-            // TODO: refactor portfolio to hold quantities of product owned
-            // TODO: sell random quantity amount instead of the whole product
-            List<Product> ownedProducts = client.getAccount().getPortfolio().getProducts();
+            Map<Product, Holding> holdings = trader.getAccount().getPortfolio().getHoldings();
             for (var ordered : orderedProducts) {
-              if (ownedProducts.contains(ordered)) {
-                client
-                    .getAccount()
-                    .removeFromPortfolio(
-                        ordered); // reserve by removing, same as balance for BUY order
+              if (holdings.containsKey(ordered)) {
+                var qtyToSell = order.getQuantity();
+                var currentQty = trader.getAccount().getPortfolio().quantityOf(ordered);
+
+                if (currentQty == 0) {
+                  continue; // nothing to sell - skip
+                }
+                // current holding quantity has been decreased before placement, default to 1
+                if (currentQty < qtyToSell) {
+                  qtyToSell = 1;
+                }
+                // reserve
+                trader.getAccount().getPortfolio().decreaseHoldingQuantity(ordered, qtyToSell);
+                validatedOrder.setQuantity(qtyToSell);
                 validatedOrder.addProduct(ordered);
               }
             }
@@ -223,7 +256,7 @@ public class OrderingStage extends AbstractSimulationStage {
           break;
         }
         // poison pill check, always check first
-        if (order.getClient() == null) {
+        if (order.getTrader() == null) {
           break;
         }
 
@@ -231,16 +264,23 @@ public class OrderingStage extends AbstractSimulationStage {
           continue;
         }
         // structure ensures indices are always clientId - 1
-        int clientIdx = order.getClient().getId() - 1;
+        int clientIdx = order.getTrader().getId() - 1;
         // modify account balance
         ReentrantLock clientLock = clientLocks.get(clientIdx);
         clientLock.lock();
         try {
-          Account account = order.getClient().getAccount();
+          Account account = order.getTrader().getAccount();
           if (order.side().equals(BUY)) {
             account.decreaseReservedBalance(order.getOrderPrice());
-            order.getProducts().forEach(account::addToPortfolio);
-          } else {
+            // add new holding if not owned or increase an existing one's qty
+            for (var p : order.getProducts()) {
+              if (account.getPortfolio().owns(p)) {
+                account.getPortfolio().increaseHoldingQuantity(p, order.getQuantity());
+              } else {
+                account.getPortfolio().addHolding(p, order.getQuantity());
+              }
+            }
+          } else { // sell
             // portfolio already updated at placement
             account.increaseAvailableBalance(order.getOrderPrice());
           }

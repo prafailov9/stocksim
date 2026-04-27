@@ -37,4 +37,17 @@ public class Holding {
   public void setAvgCost(long avgCost) {
     this.avgCost = avgCost;
   }
+
+  public void addShares(long quantity, long pricePerShare) {
+    long totalCost = (this.quantity * this.avgCost) + (quantity * pricePerShare);
+    this.quantity += quantity;
+    this.avgCost = totalCost / this.quantity;
+  }
+
+  public void removeShares(long quantity) {
+    if (quantity > this.quantity) {
+      throw new IllegalArgumentException("Cannot sell more shares than owned");
+    }
+    this.quantity -= quantity;
+  }
 }

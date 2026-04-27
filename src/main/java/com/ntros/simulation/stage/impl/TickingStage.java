@@ -89,7 +89,6 @@ public class TickingStage extends AbstractSimulationStage {
               mover.getSells(),
               arrow);
         }
-
         // footer
         System.out.printf("%n  Total settled orders: %d%n", settledCount.get());
       }
