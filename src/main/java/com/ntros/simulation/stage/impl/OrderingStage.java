@@ -26,7 +26,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class OrderingStage extends AbstractSimulationStage {
 
   private final Random RNG = new Random();
-  private static final String ORDERING_STAGE_NAME = "OrderPipeline";
+  private static final Order POISON = new Order(null, null);
 
   private final List<Product> products;
   private final List<Trader> traders;
@@ -49,19 +49,12 @@ public class OrderingStage extends AbstractSimulationStage {
     priceFlows = context.priceFlows();
   }
 
-  @Override
-  public String getStageName() {
-    return ORDERING_STAGE_NAME;
-  }
-
   public void seedPoison() throws InterruptedException {
-    var poison = new Order(null, null);
-    seeded.put(poison);
+    seeded.put(POISON);
   }
 
   public void placePoison() throws InterruptedException {
-    var poison = new Order(null, null);
-    placements.put(poison);
+    placements.put(POISON);
   }
 
   public Runnable seeding(CancellationToken cancellationToken) {
@@ -188,6 +181,8 @@ public class OrderingStage extends AbstractSimulationStage {
             }
           } else {
             // check ordered against owned, only allow once who match
+            // TODO: refactor portfolio to hold quantities of product owned
+            // TODO: sell random quantity amount instead of the whole product
             List<Product> ownedProducts = client.getAccount().getPortfolio().getProducts();
             for (var ordered : orderedProducts) {
               if (ownedProducts.contains(ordered)) {

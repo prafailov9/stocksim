@@ -26,11 +26,6 @@ public class EconomyManagementStage extends AbstractSimulationStage {
     clientLocks = context.clientLocks();
   }
 
-  @Override
-  public String getStageName() {
-    return "EconomyManagementStage";
-  }
-
   public Runnable manageEconomy() {
     return () -> {
       while (true) {

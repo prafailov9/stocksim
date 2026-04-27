@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 
 public class PricingStage extends AbstractSimulationStage {
-  private static final String NAME = "PricingStage";
   private static final long PRICER_TIMESTEP_MS = 1_000;
   private final List<Object> pricingLocks;
   private final List<Product> availableProducts;
@@ -25,11 +24,6 @@ public class PricingStage extends AbstractSimulationStage {
     pricingLocks = context.pricingLocks();
     availableProducts = context.availableProducts();
     topMovers = context.topMovers();
-  }
-
-  @Override
-  public String getStageName() {
-    return NAME;
   }
 
   public Runnable updatePrices(

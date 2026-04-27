@@ -23,11 +23,6 @@ public class TickingStage extends AbstractSimulationStage {
     settledCount = context.settledCount();
   }
 
-  @Override
-  public String getStageName() {
-    return NAME;
-  }
-
   public Runnable displayMarketState() {
     return () -> {
       while (true) {

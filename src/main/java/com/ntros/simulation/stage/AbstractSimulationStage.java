@@ -2,7 +2,7 @@ package com.ntros.simulation.stage;
 
 import com.ntros.simulation.SimulationContext;
 
-public abstract class AbstractSimulationStage implements Stage {
+public abstract class AbstractSimulationStage {
 
   protected final SimulationContext context;
 
