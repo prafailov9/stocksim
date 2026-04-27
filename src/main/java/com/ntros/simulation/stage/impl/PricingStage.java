@@ -42,37 +42,30 @@ public class PricingStage extends AbstractSimulationStage {
           int productIdx = entry.getKey() - 1;
           var flow = entry.getValue();
 
-          long buys;
-          long sells;
-
           synchronized (pricingLocks.get(productIdx)) {
-            buys = flow.getBuys();
-            sells = flow.getSells();
-          }
-          long totalVolume = buys + sells;
-          long distance = buys - sells;
+            long buys = flow.getBuys();
+            long sells = flow.getSells();
+            long totalVolume = buys + sells;
+            long distance = buys - sells;
 
-          if (totalVolume == 0) {
-            continue;
-          }
+            flow.resetBuys();
+            flow.resetSells();
 
-          synchronized (pricingLocks.get(productIdx)) {
+            if (totalVolume == 0) continue;
+
             var product = availableProducts.get(productIdx);
-
             double distanceRatio = (double) distance / totalVolume;
             double movePct = distanceRatio * PRICE_SENSITIVITY_CENTS;
             movePct =
                 Math.max(-MAX_PRICE_MOVE_PCT_CENTS, Math.min(MAX_PRICE_MOVE_PCT_CENTS, movePct));
 
-            flow.resetBuys();
-            flow.resetSells();
             long oldPrice = product.getPrice();
-            long delta = Math.round(oldPrice * movePct);
+            long delta = Math.round(oldPrice * movePct / 100.0);
             long newPrice = Math.max(oldPrice + delta, MIN_PRODUCT_PRICE);
             product.setPrice(newPrice);
             flow.setDelta(delta);
             flow.setCurrentPrice(newPrice);
-            topMovers.offer(flow.snapshot(buys, sells)); // pass the values read before reset
+            topMovers.offer(flow.snapshot(buys, sells));
           }
         }
       }
