@@ -18,8 +18,8 @@ public class Main {
 
   public static void main(String[] args) {
     int clientCount = 5_000;
-    int productCount = 30_000;
-    int priceBound = 5;
+    int productCount = 18_000;
+    int priceBound = 100; // dollars
 
     Market market = Seeder.seedMarket(productCount, priceBound);
     List<Trader> traders = Seeder.seedTraders(clientCount);

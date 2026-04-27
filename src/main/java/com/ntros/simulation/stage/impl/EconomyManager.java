@@ -11,7 +11,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class EconomyManager extends AbstractSimulationStage {
   private final Random RNG = new Random();
-  private static final int BALANCE_CHECK_TIMESTEP_MS = 1000;
+  private static final int BALANCE_CHECK_TIMESTEP_MS = 50;
   private static final long BALANCE_FLOOR_CENTS = 5_000_000L;
   private static final long BALANCE_INJECTION_CENTS = 10_000_000L;
 
