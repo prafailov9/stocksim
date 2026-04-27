@@ -11,13 +11,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class MarketDisplayStage extends AbstractSimulationStage {
+public class TickingStage extends AbstractSimulationStage {
   private static final int TICKER_TIMESTEP_MS = 2000;
   private static final String NAME = "MarketDisplayStage";
   private final BoundedMinHeap<PriceFlow> topMovers;
   private final AtomicLong settledCount;
 
-  public MarketDisplayStage(SimulationContext context) {
+  public TickingStage(SimulationContext context) {
     super(context);
     topMovers = context.topMovers();
     settledCount = context.settledCount();

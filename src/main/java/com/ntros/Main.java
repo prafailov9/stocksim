@@ -33,7 +33,7 @@ public class Main {
 
     System.out.printf("Average account balance: %s\n", avg);
     StockMarketSimulation simulation = new StockMarketSimulation(market, clients);
-    int runtimeMs = 12_000;
+    int runtimeMs = 14_000;
     // run
     simulation.run();
     try {
