@@ -7,7 +7,7 @@ public class IdSequencer {
   private static final AtomicInteger MARKET_ID_COUNTER = new AtomicInteger(1);
   private static final AtomicInteger PRODUCT_ID_COUNTER = new AtomicInteger(1);
   private static final AtomicInteger ORDER_ID_COUNTER = new AtomicInteger(1);
-  private static final AtomicInteger CLIENT_ID_COUNTER = new AtomicInteger(1);
+  private static final AtomicInteger TRADER_ID_COUNTER = new AtomicInteger(1);
   private static final AtomicInteger ACCOUNT_ID_COUNTER = new AtomicInteger(1);
   private static final AtomicInteger PORTFOLIO_ID_COUNTER = new AtomicInteger(1);
   private static final AtomicInteger ORDER_FLOW_ID_COUNTER = new AtomicInteger(1);
@@ -25,8 +25,8 @@ public class IdSequencer {
     return ORDER_ID_COUNTER.getAndIncrement();
   }
 
-  public static int nextClientId() {
-    return CLIENT_ID_COUNTER.getAndIncrement();
+  public static int nextTraderId() {
+    return TRADER_ID_COUNTER.getAndIncrement();
   }
 
   public static int nextAccountId() {

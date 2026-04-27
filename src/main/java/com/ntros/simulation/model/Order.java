@@ -10,20 +10,20 @@ public class Order {
   private static final double MIN_ORDER_PRICE = 1.00;
 
   private final int id;
-  private final Client client;
+  private final Trader trader;
   private final List<Product> products;
   private final Side side;
   private long orderPrice = 0;
 
-  public Order(Client client, Side side) {
+  public Order(Trader trader, Side side) {
     id = IdSequencer.nextOrderId();
-    this.client = client;
+    this.trader = trader;
     products = new ArrayList<>();
     this.side = side;
   }
 
-  public Order(Client client, Product product, Side side) {
-    this(client, side);
+  public Order(Trader trader, Product product, Side side) {
+    this(trader, side);
     if (product == null) {
       throw new IllegalArgumentException("Product cannot be null.");
     }
@@ -34,8 +34,8 @@ public class Order {
     return id;
   }
 
-  public Client getClient() {
-    return client;
+  public Trader getClient() {
+    return trader;
   }
 
   public Side getSide() {

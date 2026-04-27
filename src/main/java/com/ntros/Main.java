@@ -1,6 +1,6 @@
 package com.ntros;
 
-import com.ntros.simulation.model.Client;
+import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.model.Market;
 import com.ntros.simulation.model.Product;
 import com.ntros.simulation.StockMarketSimulation;
@@ -25,14 +25,14 @@ public class Main {
     int maxClientDollars = 10_000;
 
     Market market = main.buildMarket(productCount, priceBound);
-    List<Client> clients = main.buildClients(clientCount, maxClientDollars);
-    main.seedPortfolios(clients, new ArrayList<>(market.getAvailableProducts()));
+    List<Trader> traders = main.buildClients(clientCount, maxClientDollars);
+    main.seedPortfolios(traders, new ArrayList<>(market.getAvailableProducts()));
     System.out.println("Built marker and clients.");
 
-    double avg = MarketUtils.getAverageBuyingPower(clients);
+    double avg = MarketUtils.getAverageBuyingPower(traders);
 
     System.out.printf("Average account balance: %s\n", avg);
-    StockMarketSimulation simulation = new StockMarketSimulation(market, clients);
+    StockMarketSimulation simulation = new StockMarketSimulation(market, traders);
     int runtimeMs = 14_000;
     // run
     simulation.run();
@@ -56,18 +56,18 @@ public class Main {
     return market;
   }
 
-  private List<Client> buildClients(int clients, int maxClientDollars) {
-    List<Client> list = new ArrayList<>();
+  private List<Trader> buildClients(int clients, int maxClientDollars) {
+    List<Trader> list = new ArrayList<>();
 
     for (int i = 1; i <= clients; i++) {
-      list.add(new Client(generateBuyingPowerCents(maxClientDollars)));
+      list.add(new Trader(generateBuyingPowerCents(maxClientDollars)));
     }
 
     return list;
   }
 
-  private void seedPortfolios(List<Client> clients, List<Product> products) {
-    for (var client : clients) {
+  private void seedPortfolios(List<Trader> traders, List<Product> products) {
+    for (var client : traders) {
       // select random amount of unique products for each client
       int rngCount = RNG.nextInt(1, 12);
       HashSet<Product> selectedProducts = new HashSet<>();

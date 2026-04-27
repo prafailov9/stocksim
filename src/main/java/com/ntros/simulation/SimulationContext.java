@@ -1,6 +1,6 @@
 package com.ntros.simulation;
 
-import com.ntros.simulation.model.Client;
+import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.model.Order;
 import com.ntros.simulation.model.PriceFlow;
 import com.ntros.simulation.model.Product;
@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 public record SimulationContext(
-    List<Client> clients,
+    List<Trader> traders,
     List<Product> availableProducts,
     Map<Integer, PriceFlow> priceFlows,
     List<Map<Integer, PriceFlow>> priceFlowPartitions,

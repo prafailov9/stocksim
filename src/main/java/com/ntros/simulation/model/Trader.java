@@ -3,13 +3,13 @@ package com.ntros.simulation.model;
 import com.ntros.simulation.IdSequencer;
 import java.util.Objects;
 
-public class Client {
+public class Trader {
 
   private final int id;
   private final Account account;
 
-  public Client(long initialBuyingPower) {
-    id = IdSequencer.nextClientId();
+  public Trader(long initialBuyingPower) {
+    id = IdSequencer.nextTraderId();
     account = new Account(initialBuyingPower);
   }
 
@@ -23,8 +23,8 @@ public class Client {
 
   @Override
   public boolean equals(Object o) {
-    if (!(o instanceof Client client)) return false;
-    return id == client.id;
+    if (!(o instanceof Trader trader)) return false;
+    return id == trader.id;
   }
 
   @Override

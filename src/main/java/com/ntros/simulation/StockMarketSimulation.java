@@ -1,9 +1,8 @@
 package com.ntros.simulation;
 
 import com.ntros.simulation.control.SimulationControl;
-import com.ntros.simulation.model.Client;
+import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.model.Market;
-import com.ntros.simulation.model.Order;
 import com.ntros.simulation.model.PriceFlow;
 import com.ntros.simulation.model.Product;
 import com.ntros.simulation.queue.BoundedMinHeap;
@@ -15,8 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class StockMarketSimulation {
 
@@ -30,17 +27,14 @@ public class StockMarketSimulation {
 
   private final SimulationControl control;
 
-  // locks
-  // TODO: move to lock stripping
-  private final List<ReentrantLock> clientLocks = new ArrayList<>();
-  private final List<Object> pricingLocks = new ArrayList<>();
-
-  public StockMarketSimulation(Market market, List<Client> clients) {
+  public StockMarketSimulation(Market market, List<Trader> traders) {
     // data
     List<Product> availableProducts = new ArrayList<>(market.getAvailableProducts());
-
+    // TODO: move to lock stripping
+    List<ReentrantLock> clientLocks = new ArrayList<>();
+    List<Object> pricingLocks = new ArrayList<>();
     // init locks
-    clients.forEach(x -> clientLocks.add(new ReentrantLock()));
+    traders.forEach(x -> clientLocks.add(new ReentrantLock()));
     availableProducts.forEach(p -> pricingLocks.add(new Object()));
 
     // init price flows
@@ -66,7 +60,7 @@ public class StockMarketSimulation {
 
     var context =
         new SimulationContext(
-            clients,
+            traders,
             availableProducts,
             priceFlows,
             priceFlowPartitions,

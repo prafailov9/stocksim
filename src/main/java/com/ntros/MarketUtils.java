@@ -1,7 +1,7 @@
 package com.ntros;
 
 import com.ntros.simulation.model.Account;
-import com.ntros.simulation.model.Client;
+import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.model.Money;
 import com.ntros.simulation.model.Product;
 import java.math.BigDecimal;
@@ -19,20 +19,20 @@ public class MarketUtils {
 
   private static final double MIN_BUFFER = 1.00;
 
-  public static List<Client> filterOutLowBuyingPower(BigDecimal min, List<Client> clients) {
-    List<Client> filtered =
-        clients.stream()
+  public static List<Trader> filterOutLowBuyingPower(BigDecimal min, List<Trader> traders) {
+    List<Trader> filtered =
+        traders.stream()
             .filter(x -> min.compareTo(Money.bucks(x.getAccount().getAvailableBalance(), 2)) > 0)
             .toList();
     if (!filtered.isEmpty()) {
-      clients.removeIf(
+      traders.removeIf(
           x -> min.compareTo(Money.bucks(x.getAccount().getAvailableBalance(), 2)) > 0);
     }
     return filtered;
   }
 
-  public static List<Client> filterOutLowBuyingPower(List<Product> products, List<Client> clients) {
-    return filterOutLowBuyingPower(getMinProductPrice(products), clients);
+  public static List<Trader> filterOutLowBuyingPower(List<Product> products, List<Trader> traders) {
+    return filterOutLowBuyingPower(getMinProductPrice(products), traders);
   }
 
   public static BigDecimal getMinProductPrice(List<Product> products) {
@@ -51,16 +51,16 @@ public class MarketUtils {
     return getMinProductPrice(products).add(BigDecimal.valueOf(MIN_BUFFER));
   }
 
-  public static double getTotalBalanceForAllClients(List<Client> clients) {
+  public static double getTotalBalanceForAllClients(List<Trader> traders) {
     double sum = 0.00;
-    List<Account> accounts = clients.stream().map(Client::getAccount).toList();
+    List<Account> accounts = traders.stream().map(Trader::getAccount).toList();
     for (var acc : accounts) {
       sum += acc.getAvailableBalance();
     }
     return sum;
   }
 
-  public static double getAverageBuyingPower(List<Client> clients) {
-    return getTotalBalanceForAllClients(clients) / clients.size();
+  public static double getAverageBuyingPower(List<Trader> traders) {
+    return getTotalBalanceForAllClients(traders) / traders.size();
   }
 }

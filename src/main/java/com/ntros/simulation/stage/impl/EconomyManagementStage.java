@@ -2,7 +2,7 @@ package com.ntros.simulation.stage.impl;
 
 import com.ntros.simulation.SimulationContext;
 import com.ntros.simulation.model.Account;
-import com.ntros.simulation.model.Client;
+import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.model.Product;
 import com.ntros.simulation.stage.AbstractSimulationStage;
 import java.util.List;
@@ -16,13 +16,13 @@ public class EconomyManagementStage extends AbstractSimulationStage {
   private static final long BALANCE_INJECTION_CENTS = 10_000_000L;
 
   private final List<Product> availableProducts;
-  private final List<Client> clients;
+  private final List<Trader> traders;
   private final List<ReentrantLock> clientLocks;
 
   public EconomyManagementStage(SimulationContext context) {
     super(context);
     availableProducts = context.availableProducts();
-    clients = context.clients();
+    traders = context.traders();
     clientLocks = context.clientLocks();
   }
 
@@ -40,14 +40,14 @@ public class EconomyManagementStage extends AbstractSimulationStage {
           Thread.currentThread().interrupt();
           break;
         }
-        for (int i = 0; i < clients.size(); i++) {
+        for (int i = 0; i < traders.size(); i++) {
           ReentrantLock lock = clientLocks.get(i);
           // skip if settler is using this client right now
           if (!lock.tryLock()) {
             continue;
           }
           try {
-            Account account = clients.get(i).getAccount();
+            Account account = traders.get(i).getAccount();
             if (account.getAvailableBalance() < BALANCE_FLOOR_CENTS) {
               account.increaseAvailableBalance(BALANCE_INJECTION_CENTS);
             }

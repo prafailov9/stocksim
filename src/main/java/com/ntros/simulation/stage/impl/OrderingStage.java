@@ -7,7 +7,7 @@ import static com.ntros.simulation.model.Side.SELL;
 import com.ntros.simulation.SimulationContext;
 import com.ntros.simulation.control.CancellationToken;
 import com.ntros.simulation.model.Account;
-import com.ntros.simulation.model.Client;
+import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.model.Order;
 import com.ntros.simulation.model.PriceFlow;
 import com.ntros.simulation.model.Product;
@@ -29,7 +29,7 @@ public class OrderingStage extends AbstractSimulationStage {
   private static final String ORDERING_STAGE_NAME = "OrderPipeline";
 
   private final List<Product> products;
-  private final List<Client> clients;
+  private final List<Trader> traders;
   private final List<ReentrantLock> clientLocks;
   private final List<Object> pricingLocks;
   private final LinkedBoundedQueue<Order> seeded;
@@ -40,7 +40,7 @@ public class OrderingStage extends AbstractSimulationStage {
   public OrderingStage(SimulationContext context) {
     super(context);
     products = context.availableProducts();
-    clients = context.clients();
+    traders = context.traders();
     clientLocks = context.clientLocks();
     pricingLocks = context.pricingLocks();
     seeded = context.seeded();
@@ -70,7 +70,7 @@ public class OrderingStage extends AbstractSimulationStage {
         // get market products as list from set
 
         // init order and add to seeded store
-        var client = clients.get(RNG.nextInt(clients.size()));
+        var client = traders.get(RNG.nextInt(traders.size()));
         var side = RNG.nextFloat() < 0.50f ? BUY : SELL;
         int productsToBuy = 1;
         //          productReservationChance(0.99f, MIN_PRODUCT_SEEDING_BOUND,
