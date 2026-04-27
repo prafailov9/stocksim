@@ -11,6 +11,8 @@ public class IdSequencer {
   private static final AtomicInteger ACCOUNT_ID_COUNTER = new AtomicInteger(1);
   private static final AtomicInteger PORTFOLIO_ID_COUNTER = new AtomicInteger(1);
   private static final AtomicInteger ORDER_FLOW_ID_COUNTER = new AtomicInteger(1);
+  private static final AtomicInteger HOLDING_ID_COUNTER = new AtomicInteger(1);
+
 
 
   public static int nextMarketId() {
@@ -40,4 +42,8 @@ public class IdSequencer {
   public static int nextOrderFlowId() {
     return ORDER_FLOW_ID_COUNTER.getAndIncrement();
   }
+  public static int nextHoldingId() {
+    return ORDER_FLOW_ID_COUNTER.getAndIncrement();
+  }
+
 }

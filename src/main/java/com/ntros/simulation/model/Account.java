@@ -30,6 +30,11 @@ public class Account {
     portfolio.addProduct(product);
   }
 
+  public void addToPortfolio(Product product, long quantity) {
+    portfolio.addProduct(product);
+    portfolio.addHolding(product, quantity);
+  }
+
   public void removeFromPortfolio(Product product) {
     if (!portfolio.getProducts().contains(product)) {
       throw new IllegalArgumentException(
