@@ -16,7 +16,7 @@ public record SimulationContext(
     List<Product> availableProducts,
     Map<Integer, PriceFlow> priceFlows,
     List<Map<Integer, PriceFlow>> priceFlowPartitions,
-    List<ReentrantLock> clientLocks,
+    List<ReentrantLock> traderLocks,
     List<Object> pricingLocks,
     LinkedBoundedQueue<Order> generatedOrders,
     LinkedBoundedQueue<Order> placements,

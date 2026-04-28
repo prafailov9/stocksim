@@ -9,9 +9,6 @@ import com.ntros.simulation.stage.impl.PricingCycle;
 
 public class SimulationControl implements Control {
   private final OrderPipeline ordering;
-  private final PricingCycle pricing;
-  private final MarketTickerBoard display;
-  private final EconomyManager economy;
 
   private final Thread[] generators;
   private final Thread[] placers;
@@ -21,44 +18,38 @@ public class SimulationControl implements Control {
   private final Thread economist;
 
   private final CancellationToken token = new CancellationToken();
-  private final SimulationContext context;
   private final SimulationSettings settings;
 
   public SimulationControl(SimulationSettings settings, SimulationContext context) {
     this.settings = settings;
-    this.context = context;
-
-    // init stages
     ordering = new OrderPipeline(context);
-    pricing = new PricingCycle(context);
-    display = new MarketTickerBoard(context);
-    economy = new EconomyManager(context);
 
     // init threads
     generators = new Thread[settings.generators()];
     for (int i = 0; i < settings.generators(); i++) {
-      generators[i] = new Thread(ordering.generate(token), "t-generator-" + i);
+      generators[i] = new Thread(ordering.generateOrder(token), "t-generator-" + i);
     }
 
     placers = new Thread[settings.placers()];
     for (int i = 0; i < settings.placers(); i++) {
-      placers[i] = new Thread(ordering.placing(), "t-placer-" + i);
+      placers[i] = new Thread(ordering.placeOrder(), "t-placer-" + i);
     }
 
     processors = new Thread[settings.processors()];
     for (int i = 0; i < settings.processors(); i++) {
-      processors[i] = new Thread(ordering.processing(), "t-processor-" + i);
+      processors[i] = new Thread(ordering.processOrder(), "t-processor-" + i);
     }
 
     pricers = new Thread[settings.pricers()];
     for (int i = 0; i < settings.pricers(); i++) {
       pricers[i] =
           new Thread(
-              pricing.updatePrices(token, context.priceFlowPartitions().get(i)), "t-pricer-" + i);
+              new PricingCycle(context).updatePrices(token, context.priceFlowPartitions().get(i)),
+              "t-pricer-" + i);
     }
 
-    ticker = new Thread(display.displayMarketState(), "t-ticker-1");
-    economist = new Thread(economy.manageEconomy(), "t-economist-1");
+    ticker = new Thread(new MarketTickerBoard(context).displayMarketState(), "t-ticker-1");
+    economist = new Thread(new EconomyManager(context).manageEconomy(), "t-economist-1");
   }
 
   @Override
@@ -92,7 +83,7 @@ public class SimulationControl implements Control {
     // send poison pill to placers
     for (int i = 0; i < settings.placers(); i++) {
       try {
-        ordering.poisonGenerators();
+        ordering.poisonPlacers();
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
@@ -110,7 +101,7 @@ public class SimulationControl implements Control {
     // once producer joining is done, nothing writes to the queue anymore: send poison pill
     for (int i = 0; i < settings.processors(); i++) {
       try {
-        ordering.poisonPlacers();
+        ordering.poisonProcessors();
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }

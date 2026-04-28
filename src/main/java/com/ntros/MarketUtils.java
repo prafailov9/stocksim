@@ -49,7 +49,7 @@ public class MarketUtils {
     return getMinProductPrice(products).add(BigDecimal.valueOf(MIN_BUFFER));
   }
 
-  public static double getTotalBalanceForAllClients(List<Trader> traders) {
+  public static double getTotalBalanceForAllTraders(List<Trader> traders) {
     double sum = 0.00;
     List<Account> accounts = traders.stream().map(Trader::getAccount).toList();
     for (var acc : accounts) {
@@ -59,6 +59,6 @@ public class MarketUtils {
   }
 
   public static double getAverageBuyingPower(List<Trader> traders) {
-    return getTotalBalanceForAllClients(traders) / traders.size();
+    return getTotalBalanceForAllTraders(traders) / traders.size();
   }
 }

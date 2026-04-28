@@ -33,7 +33,7 @@ public class OrderPipeline extends AbstractSimulationStage {
 
   private final List<Product> products;
   private final List<Trader> traders;
-  private final List<ReentrantLock> clientLocks;
+  private final List<ReentrantLock> traderLocks;
   private final List<Object> pricingLocks;
   private final LinkedBoundedQueue<Order> generatedOrders;
   private final LinkedBoundedQueue<Order> placements;
@@ -44,7 +44,7 @@ public class OrderPipeline extends AbstractSimulationStage {
     super(context);
     products = context.availableProducts();
     traders = context.traders();
-    clientLocks = context.clientLocks();
+    traderLocks = context.traderLocks();
     pricingLocks = context.pricingLocks();
     generatedOrders = context.generatedOrders();
     placements = context.placements();
@@ -52,16 +52,16 @@ public class OrderPipeline extends AbstractSimulationStage {
     priceFlows = context.priceFlows();
   }
 
-  public void poisonGenerators() throws InterruptedException {
+  public void poisonPlacers() throws InterruptedException {
     generatedOrders.put(POISON);
   }
 
-  public void poisonPlacers() throws InterruptedException {
+  public void poisonProcessors() throws InterruptedException {
     placements.put(POISON);
   }
 
   // generates an order each pass
-  public Runnable generate(CancellationToken cancellationToken) {
+  public Runnable generateOrder(CancellationToken cancellationToken) {
     return () -> {
       while (!cancellationToken.isCancelled()) {
         // get market products as list from set
@@ -70,29 +70,28 @@ public class OrderPipeline extends AbstractSimulationStage {
         var trader = traders.get(RNG.nextInt(traders.size()));
         var side = RNG.nextFloat() < 0.50f ? BUY : SELL;
         Set<Product> validatedProducts = new HashSet<>();
-        long qty;
-        // single order each pass for simplicity, maybe expand later
+        long generatedQuantity;
+
+        // single product each pass for simplicity, maybe expand later
         if (side == BUY) {
           var product = products.get(RNG.nextInt(products.size()));
           validatedProducts.add(product);
           // determine qty from trader's current spending balance
           long price = product.getPrice();
           long affordableShares = trader.getAccount().getAvailableBalance() / price;
-          long sharesToBuy =
-              affordableShares > 0
-                  ? RNG.nextLong(1, Math.min(affordableShares, 100) + 1)
-                  : 1; // cap qty at 100
-          qty = sharesToBuy;
+          // cap at 100;
+          generatedQuantity =
+              affordableShares > 0 ? RNG.nextLong(1, Math.min(affordableShares, 100) + 1) : 1;
         } else { // SELLS
           Map<Product, Holding> ownedHoldings;
           List<Product> ownedProducts;
-          ReentrantLock clientLock = clientLocks.get(trader.getId() - 1);
-          clientLock.lock();
+          ReentrantLock traderLock = traderLocks.get(trader.getId() - 1);
+          traderLock.lock();
           try {
             ownedHoldings = trader.getAccount().getPortfolio().getHoldings();
             ownedProducts = new ArrayList<>(ownedHoldings.keySet());
           } finally {
-            clientLock.unlock();
+            traderLock.unlock();
           }
           // if trader owns nothing - skip
           if (ownedHoldings.isEmpty()) {
@@ -111,12 +110,12 @@ public class OrderPipeline extends AbstractSimulationStage {
 
             // select random holding
             validatedProducts.add(randomProduct);
-            qty = qtyToSell;
+            generatedQuantity = qtyToSell;
           }
         }
         Order order = new Order(trader, side);
         order.addAllProducts(new ArrayList<>(validatedProducts));
-        order.setQuantity(qty);
+        order.setQuantity(generatedQuantity);
         try {
           generatedOrders.put(order);
         } catch (InterruptedException ex) {
@@ -126,7 +125,7 @@ public class OrderPipeline extends AbstractSimulationStage {
     };
   }
 
-  public Runnable placing() {
+  public Runnable placeOrder() {
     return () -> {
       while (true) {
         Order order;
@@ -139,7 +138,7 @@ public class OrderPipeline extends AbstractSimulationStage {
         if (order == null) {
           continue;
         }
-        // poison pill check, any placer receiving a null client will exit before placing a new
+        // poison pill check, any placer receiving a null trader will exit before placing a new
         // order
         if (order.getTrader() == null) {
           break;
@@ -156,7 +155,8 @@ public class OrderPipeline extends AbstractSimulationStage {
         long totalPrice = 0L;
         long snapshotPrice = 0L; // price per share at placement time
         for (var product : orderedProducts) {
-          synchronized (pricingLocks.get(product.getId() - 1)) {
+          Object pricingLock = pricingLocks.get(product.getId() - 1);
+          synchronized (pricingLock) {
             // TODO: add fee
             snapshotPrice = product.getPrice();
             totalPrice += snapshotPrice * order.getQuantity();
@@ -164,10 +164,10 @@ public class OrderPipeline extends AbstractSimulationStage {
         }
 
         var side = order.getSide();
-        int clientIdx = order.getTrader().getId() - 1;
+        int traderIdx = order.getTrader().getId() - 1;
         var validatedOrder = new Order(trader, side);
-        ReentrantLock clientLock = clientLocks.get(clientIdx);
-        clientLock.lock();
+        ReentrantLock traderLock = traderLocks.get(traderIdx);
+        traderLock.lock();
         try {
           if (side.equals(BUY)) {
             long availableBalance = trader.getAccount().getAvailableBalance();
@@ -183,7 +183,6 @@ public class OrderPipeline extends AbstractSimulationStage {
             } else {
               // try partial buy
               long partialPrice = 0L;
-              // TODO: partial qty logic, should be based off of affordable shares
               long affordableShares = 0L;
               for (var ordered : orderedProducts) {
                 long pricePerShare = ordered.getPrice();
@@ -204,9 +203,9 @@ public class OrderPipeline extends AbstractSimulationStage {
               // partial buy failed - skip
               if (partialPrice == 0) {
                 //              log.info(
-                //                  "!!!BROKIE ALERT!!! Client {} is too broke. TotalBuyPrice: {},
-                // minBuyingPowerAllowed: {}, clientAvailableBalance: {}",
-                //                  client.getId(),
+                //                  "!!!BROKIE ALERT!!! Trader {} is too broke. TotalBuyPrice: {},
+                // minBuyingPowerAllowed: {}, traderAvailableBalance: {}",
+                //                  trader.getId(),
                 //                  Money.bucks(totalPrice),
                 //                  Money.bucks(MIN_ALLOWED_CENTS),
                 //                  Money.bucks(availableBalance));
@@ -251,7 +250,7 @@ public class OrderPipeline extends AbstractSimulationStage {
             }
           }
         } finally {
-          clientLock.unlock();
+          traderLock.unlock();
         }
         // place the order
         try {
@@ -263,9 +262,9 @@ public class OrderPipeline extends AbstractSimulationStage {
     };
   }
 
-  public Runnable processing() {
+  public Runnable processOrder() {
     return () -> {
-      // poison pill handles control
+      // spin until poison pill found
       while (true) {
         Order order;
         try {
@@ -274,7 +273,7 @@ public class OrderPipeline extends AbstractSimulationStage {
           Thread.currentThread().interrupt();
           break;
         }
-        // poison pill check, always check first
+        // always check poison pill first
         if (order.getTrader() == null) {
           break;
         }
@@ -282,11 +281,11 @@ public class OrderPipeline extends AbstractSimulationStage {
         if (order.getProducts().isEmpty()) {
           continue;
         }
-        // structure ensures indices are always clientId - 1
-        int clientIdx = order.getTrader().getId() - 1;
+        // structure ensures indices are always modelId - 1
+        int traderId = order.getTrader().getId() - 1;
         // modify account balance
-        ReentrantLock clientLock = clientLocks.get(clientIdx);
-        clientLock.lock();
+        ReentrantLock traderLock = traderLocks.get(traderId);
+        traderLock.lock();
         try {
           Account account = order.getTrader().getAccount();
           if (order.side().equals(BUY)) {
@@ -304,7 +303,7 @@ public class OrderPipeline extends AbstractSimulationStage {
             account.increaseAvailableBalance(order.getOrderPrice());
           }
         } finally {
-          clientLock.unlock();
+          traderLock.unlock();
         }
         processedCount.incrementAndGet();
 

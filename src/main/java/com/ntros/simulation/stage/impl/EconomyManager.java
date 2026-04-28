@@ -11,19 +11,19 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class EconomyManager extends AbstractSimulationStage {
   private final Random RNG = new Random();
-  private static final int BALANCE_CHECK_TIMESTEP_MS = 50;
+  private static final int BALANCE_CHECK_TIMESTEP_MS = 100;
   private static final long BALANCE_FLOOR_CENTS = 5_000_000L;
   private static final long BALANCE_INJECTION_CENTS = 10_000_000L;
 
   private final List<Product> availableProducts;
   private final List<Trader> traders;
-  private final List<ReentrantLock> clientLocks;
+  private final List<ReentrantLock> traderLocks;
 
   public EconomyManager(SimulationContext context) {
     super(context);
     availableProducts = context.availableProducts();
     traders = context.traders();
-    clientLocks = context.clientLocks();
+    traderLocks = context.traderLocks();
   }
 
   public Runnable manageEconomy() {
@@ -36,8 +36,8 @@ public class EconomyManager extends AbstractSimulationStage {
           break;
         }
         for (int i = 0; i < traders.size(); i++) {
-          ReentrantLock lock = clientLocks.get(i);
-          // skip if processor is using this client right now
+          ReentrantLock lock = traderLocks.get(i);
+          // skip if processor is using this trader right now
           if (!lock.tryLock()) {
             continue;
           }

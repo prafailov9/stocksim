@@ -14,15 +14,15 @@ public class Main {
   private static final int RUNTIME_MS = 32_000;
 
   public static void main(String[] args) {
-    int clientCount = 5_000;
+    int traderCount = 5_000;
     int productCount = 18_000;
     int priceBound = 100; // dollars
 
     Market market = Generator.generateMarket(productCount, priceBound);
-    List<Trader> traders = Generator.generateTraders(clientCount);
+    List<Trader> traders = Generator.generateTraders(traderCount);
     Generator.generatePortfolios(traders, new ArrayList<>(market.getAvailableProducts()));
 
-    log.info("Built marker and clients.");
+    log.info("Built market and traders.");
     log.info("Average account balance: {}", MarketUtils.getAverageBuyingPower(traders));
 
     // start sim

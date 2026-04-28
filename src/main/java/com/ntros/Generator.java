@@ -140,7 +140,7 @@ public class Generator {
   // brokie:50%,  $100 - $5000
   // bourg:30%, $5000 - $75 000
   // affluent: 10%, $75000 - $500000
-  // High net-worth: 4%, $500000 - $5 000 000
+  // High net-worth: 9%, $500000 - $5 000 000
   // bezos: 1%, $5 000 000 +
   private static Range getRange(float chance) {
     if (chance <= 0.5f) {

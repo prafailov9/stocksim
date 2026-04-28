@@ -31,10 +31,10 @@ public class StockMarketSimulation {
     // data
     List<Product> availableProducts = new ArrayList<>(market.getAvailableProducts());
     // TODO: move to lock stripping
-    List<ReentrantLock> clientLocks = new ArrayList<>();
+    List<ReentrantLock> traderLocks = new ArrayList<>();
     List<Object> pricingLocks = new ArrayList<>();
     // init locks
-    traders.forEach(x -> clientLocks.add(new ReentrantLock()));
+    traders.forEach(x -> traderLocks.add(new ReentrantLock()));
     availableProducts.forEach(p -> pricingLocks.add(new Object()));
 
     // init price flows
@@ -64,7 +64,7 @@ public class StockMarketSimulation {
             availableProducts,
             priceFlows,
             priceFlowPartitions,
-            clientLocks,
+            traderLocks,
             pricingLocks,
             new LinkedBoundedQueue<>(MAX_ALLOWED_ORDERS),
             new LinkedBoundedQueue<>(MAX_ALLOWED_ORDERS),
