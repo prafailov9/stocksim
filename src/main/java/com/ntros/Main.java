@@ -11,11 +11,11 @@ import org.slf4j.LoggerFactory;
 /** Hello world! */
 public class Main {
   private static final Logger log = LoggerFactory.getLogger(Main.class);
-  private static final int RUNTIME_MS = 32_000;
+  private static final int TOTAL_RUNTIME_MS = 32_000; // seconds
 
   public static void main(String[] args) {
-    int traderCount = 5_000;
-    int productCount = 18_000;
+    int traderCount = 50_000;
+    int productCount = 8_000;
     int priceBound = 100; // dollars
 
     Market market = Generator.generateMarket(productCount, priceBound);
@@ -27,10 +27,10 @@ public class Main {
 
     // start sim
     StockMarketSimulation simulation = new StockMarketSimulation(market, traders);
-    log.info("Starting sim...");
+    log.info("Starting sim for {} seconds...", TOTAL_RUNTIME_MS);
     simulation.run();
     try {
-      Thread.sleep(RUNTIME_MS);
+      Thread.sleep(TOTAL_RUNTIME_MS);
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }

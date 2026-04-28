@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 public class PricingCycle extends AbstractSimulationStage {
-  private static final long PRICER_TIMESTEP_MS = 1_000;
+  private static final long PRICER_TIMESTEP_MS = 500;
   private final List<Object> pricingLocks;
   private final List<Product> availableProducts;
   private final BoundedMinHeap<PriceFlow> topMovers;
@@ -51,7 +51,10 @@ public class PricingCycle extends AbstractSimulationStage {
             flow.resetBuys();
             flow.resetSells();
 
-            if (totalVolume == 0) continue;
+            // skip pricing for this product if no orders have been executed this cycle
+            if (totalVolume == 0) {
+              continue;
+            }
 
             var product = availableProducts.get(productIdx);
             double distanceRatio = (double) distance / totalVolume;

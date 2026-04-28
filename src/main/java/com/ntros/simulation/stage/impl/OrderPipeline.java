@@ -37,7 +37,7 @@ public class OrderPipeline extends AbstractSimulationStage {
   private final List<Object> pricingLocks;
   private final LinkedBoundedQueue<Order> generatedOrders;
   private final LinkedBoundedQueue<Order> placements;
-  private final AtomicLong processedCount;
+  private final AtomicLong processedOrdersCount;
   private final Map<Integer, PriceFlow> priceFlows;
 
   public OrderPipeline(SimulationContext context) {
@@ -48,7 +48,7 @@ public class OrderPipeline extends AbstractSimulationStage {
     pricingLocks = context.pricingLocks();
     generatedOrders = context.generatedOrders();
     placements = context.placements();
-    processedCount = context.processedCount();
+    processedOrdersCount = context.processedCount();
     priceFlows = context.priceFlows();
   }
 
@@ -277,7 +277,7 @@ public class OrderPipeline extends AbstractSimulationStage {
         if (order.getTrader() == null) {
           break;
         }
-
+        // skip if empty order
         if (order.getProducts().isEmpty()) {
           continue;
         }
@@ -305,17 +305,18 @@ public class OrderPipeline extends AbstractSimulationStage {
         } finally {
           traderLock.unlock();
         }
-        processedCount.incrementAndGet();
+        processedOrdersCount.incrementAndGet();
 
         // adjust price flow for product
         for (var p : order.getProducts()) {
-          var pricingLock = pricingLocks.get(p.getId() - 1);
-          synchronized (pricingLock) {
+          synchronized (pricingLocks.get(p.getId() - 1)) {
             var priceFlow = priceFlows.get(p.getId());
             if (priceFlow == null) {
               throw new RuntimeException(
                   String.format("No priceFlow exists for productId: %s", p.getId()));
             }
+            // increase the volume of the traded product. will be reset at the end of the pricing
+            // cycle
             if (order.getSide().equals(BUY)) {
               priceFlow.increaseBuys();
             } else {

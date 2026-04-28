@@ -9,8 +9,4 @@ public abstract class AbstractSimulationStage {
   protected AbstractSimulationStage(SimulationContext context) {
     this.context = context;
   }
-
-  public SimulationContext getContext() {
-    return context;
-  }
 }

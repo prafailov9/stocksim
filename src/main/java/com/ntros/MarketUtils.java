@@ -5,6 +5,7 @@ import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.model.Money;
 import com.ntros.simulation.model.Product;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 public class MarketUtils {
@@ -49,16 +50,18 @@ public class MarketUtils {
     return getMinProductPrice(products).add(BigDecimal.valueOf(MIN_BUFFER));
   }
 
-  public static double getTotalBalanceForAllTraders(List<Trader> traders) {
-    double sum = 0.00;
-    List<Account> accounts = traders.stream().map(Trader::getAccount).toList();
-    for (var acc : accounts) {
-      sum += acc.getAvailableBalance();
-    }
-    return sum;
+  public static long getTotalBalanceForAllTraders(List<Trader> traders) {
+    return traders.stream()
+        .map(Trader::getAccount)
+        .mapToLong(Account::getAvailableBalance)
+        .sum();
   }
 
-  public static double getAverageBuyingPower(List<Trader> traders) {
-    return getTotalBalanceForAllTraders(traders) / traders.size();
+  public static BigDecimal getAverageBuyingPower(List<Trader> traders) {
+    long totalCents = getTotalBalanceForAllTraders(traders);
+
+    return BigDecimal.valueOf(totalCents)
+        .divide(BigDecimal.valueOf(traders.size() * 100L), 2, RoundingMode.HALF_UP);
   }
+
 }

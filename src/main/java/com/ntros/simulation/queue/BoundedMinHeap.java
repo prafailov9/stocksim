@@ -32,7 +32,6 @@ public class BoundedMinHeap<E> {
       insert(value);
       return true;
     }
-
     E root = elementAt(0);
 
     // If new value is not better than the weakest kept value, ignore it.

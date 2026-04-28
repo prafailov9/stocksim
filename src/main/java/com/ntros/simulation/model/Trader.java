@@ -8,8 +8,9 @@ public class Trader {
 
   private final int id;
   private final Account account;
-  private TradingType tradingType;
+  // indicates the initial wealth tier of the trader, pre-sim start. Would be interesting to compare with post-sim results, if the trader went broke or got rich
   private final InitialWealthTier wealthTier;
+
   public Trader(long initialBuyingPower, InitialWealthTier wealthTier) {
     id = IdSequencer.nextTraderId();
     account = new Account(initialBuyingPower);
@@ -22,10 +23,6 @@ public class Trader {
 
   public Account getAccount() {
     return account;
-  }
-
-  public TradingType getTradingType() {
-    return tradingType;
   }
 
   public InitialWealthTier getWealthTier() {

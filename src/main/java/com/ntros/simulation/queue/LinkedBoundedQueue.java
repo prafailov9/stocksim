@@ -25,15 +25,13 @@ public class LinkedBoundedQueue<E> implements Queue<E> {
 
     this.capacity = capacity;
 
-    // Sentinel node. Makes sure producers and consumers never operate on the same node concurrently.
-    head = tail = new Node<>(null); // dummy sentinel
+    // Sentinel node. Makes sure producers and consumers never operate on the same node
+    // concurrently.
+    head = tail = new Node<>(null);
     notFull = putLock.newCondition();
     notEmpty = takeLock.newCondition();
   }
 
-  /**
-   *
-   */
   @Override
   public void put(E item) throws InterruptedException {
     if (item == null) {
@@ -162,7 +160,6 @@ public class LinkedBoundedQueue<E> implements Queue<E> {
   }
 
   private static final class Node<E> {
-
     E item;
     Node<E> next;
 
