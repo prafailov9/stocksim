@@ -69,6 +69,11 @@ public class PricingCycle extends AbstractSimulationStage {
             flow.setDelta(delta);
             flow.setCurrentPrice(newPrice);
             topMovers.offer(flow.snapshot(buys, sells));
+            if (delta > 0) {
+              context.marketSnapshot().offerGainer(flow);
+            } else {
+              context.marketSnapshot().offerLoser(flow);
+            }
           }
         }
       }

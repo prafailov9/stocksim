@@ -1,6 +1,8 @@
 package com.ntros.simulation.queue;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 public class BoundedMinHeap<E> {
 
@@ -49,7 +51,6 @@ public class BoundedMinHeap<E> {
     if (isEmpty()) {
       return null;
     }
-
     return elementAt(0);
   }
 
@@ -57,18 +58,23 @@ public class BoundedMinHeap<E> {
     if (isEmpty()) {
       return null;
     }
-
     E rootValue = elementAt(0);
-
     arr[0] = arr[size - 1];
     arr[size - 1] = null;
     size--;
-
     if (!isEmpty()) {
       bubbleDown(0);
     }
-
     return rootValue;
+  }
+
+  public synchronized List<E> toList() {
+    List<E> list = new ArrayList<>();
+    for (int i = 0; i < size; i++) {
+      list.add(elementAt(i));
+    }
+
+    return list;
   }
 
   public synchronized boolean isEmpty() {

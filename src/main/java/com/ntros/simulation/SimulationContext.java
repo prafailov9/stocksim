@@ -1,5 +1,6 @@
 package com.ntros.simulation;
 
+import com.ntros.simulation.model.MarketSnapshot;
 import com.ntros.simulation.model.Order;
 import com.ntros.simulation.model.PriceFlow;
 import com.ntros.simulation.model.Product;
@@ -21,4 +22,5 @@ public record SimulationContext(
     LinkedBoundedQueue<Order> generatedOrders,
     LinkedBoundedQueue<Order> placements,
     BoundedMinHeap<PriceFlow> topMovers,
-    AtomicLong processedCount) {}
+    AtomicLong processedCount,
+    MarketSnapshot marketSnapshot) {}

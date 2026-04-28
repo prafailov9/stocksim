@@ -1,6 +1,7 @@
 package com.ntros.simulation;
 
 import com.ntros.simulation.control.SimulationControl;
+import com.ntros.simulation.model.MarketSnapshot;
 import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.model.Market;
 import com.ntros.simulation.model.PriceFlow;
@@ -25,6 +26,8 @@ public class StockMarketSimulation {
   private static final int PROCESSORS = 3;
   private static final int PRICERS = 3;
 
+  private static final int MAX_TOP_GAINERS = 50;
+  private static final int MAX_TOP_LOSERS = 50;
   private final SimulationControl control;
 
   public StockMarketSimulation(Market market, List<Trader> traders) {
@@ -70,7 +73,8 @@ public class StockMarketSimulation {
             new LinkedBoundedQueue<>(MAX_ALLOWED_ORDERS),
             new BoundedMinHeap<>(
                 MAX_TOP_MOVERS, Comparator.comparingLong(flow -> Math.abs(flow.getDelta()))),
-            new AtomicLong(0));
+            new AtomicLong(0),
+            new MarketSnapshot(MAX_TOP_GAINERS, MAX_TOP_LOSERS));
 
     control = new SimulationControl(settings, context);
   }
