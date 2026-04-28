@@ -9,6 +9,7 @@ import com.ntros.simulation.control.CancellationToken;
 import com.ntros.simulation.model.Account;
 import com.ntros.simulation.model.Holding;
 import com.ntros.simulation.model.Order;
+import com.ntros.simulation.model.Portfolio;
 import com.ntros.simulation.model.PriceFlow;
 import com.ntros.simulation.model.Product;
 import com.ntros.simulation.model.Trader;
@@ -31,6 +32,8 @@ public class OrderPipeline extends AbstractSimulationStage {
   private final Random RNG = new Random();
   private static final Order POISON = new Order(null, null);
 
+  private final OrderGenerationStrategies strategies;
+
   private final List<Product> products;
   private final List<Trader> traders;
   private final List<ReentrantLock> traderLocks;
@@ -42,6 +45,8 @@ public class OrderPipeline extends AbstractSimulationStage {
 
   public OrderPipeline(SimulationContext context) {
     super(context);
+    strategies = new OrderGenerationStrategies(context);
+
     products = context.availableProducts();
     traders = context.traders();
     traderLocks = context.traderLocks();
@@ -60,62 +65,20 @@ public class OrderPipeline extends AbstractSimulationStage {
     placements.put(POISON);
   }
 
-  // generates an order each pass
   public Runnable generateOrder(CancellationToken cancellationToken) {
     return () -> {
       while (!cancellationToken.isCancelled()) {
-        // get market products as list from set
-
-        // init order and add to generatedOrders store
         var trader = traders.get(RNG.nextInt(traders.size()));
-        var side = RNG.nextFloat() < 0.50f ? BUY : SELL;
-        Set<Product> validatedProducts = new HashSet<>();
-        long generatedQuantity;
+        Order order =
+            switch (trader.getTraderType()) {
+              case NOISE -> strategies.noiseStrat(trader);
+              case MOMENTUM -> strategies.momentumStrat(trader);
+              case LONG_TERM -> strategies.longTermStrat(trader);
+            };
 
-        // single product each pass for simplicity, maybe expand later
-        if (side == BUY) {
-          var product = products.get(RNG.nextInt(products.size()));
-          validatedProducts.add(product);
-          // determine qty from trader's current spending balance
-          long price = product.getPrice();
-          long affordableShares = trader.getAccount().getAvailableBalance() / price;
-          // cap at 100;
-          generatedQuantity =
-              affordableShares > 0 ? RNG.nextLong(1, Math.min(affordableShares, 100) + 1) : 1;
-        } else { // SELLS
-          Map<Product, Holding> ownedHoldings;
-          List<Product> ownedProducts;
-          ReentrantLock traderLock = traderLocks.get(trader.getId() - 1);
-          traderLock.lock();
-          try {
-            ownedHoldings = trader.getAccount().getPortfolio().getHoldings();
-            ownedProducts = new ArrayList<>(ownedHoldings.keySet());
-          } finally {
-            traderLock.unlock();
-          }
-          // if trader owns nothing - skip
-          if (ownedHoldings.isEmpty()) {
-            continue;
-          } else {
-            // add only one single-product, sell order per cycle, with varying quantities to sell,
-            // avg less than 1/3 of total holding
-
-            var randomProduct = ownedProducts.get(RNG.nextInt(ownedProducts.size()));
-            var holding = trader.getAccount().getPortfolio().getHoldings().get(randomProduct);
-            long productQuantity = holding != null ? holding.getQuantity() : 0;
-            if (productQuantity == 0) continue;
-
-            var sellQtyCap = Math.max(1L, productQuantity / 3L);
-            var qtyToSell = RNG.nextLong(1, sellQtyCap + 1);
-
-            // select random holding
-            validatedProducts.add(randomProduct);
-            generatedQuantity = qtyToSell;
-          }
+        if (order == null) {
+          continue;
         }
-        Order order = new Order(trader, side);
-        order.addAllProducts(new ArrayList<>(validatedProducts));
-        order.setQuantity(generatedQuantity);
         try {
           generatedOrders.put(order);
         } catch (InterruptedException ex) {
@@ -124,6 +87,72 @@ public class OrderPipeline extends AbstractSimulationStage {
       }
     };
   }
+
+  // generates an order each pass
+  //  public Runnable generateOrder(CancellationToken cancellationToken) {
+  //    return () -> {
+  //      while (!cancellationToken.isCancelled()) {
+  //        // get market products as list from set
+  //
+  //        // init order and add to generatedOrders store
+  //        var trader = traders.get(RNG.nextInt(traders.size()));
+  //        var side = RNG.nextFloat() < 0.50f ? BUY : SELL;
+  //        Set<Product> validatedProducts = new HashSet<>();
+  //        long generatedQuantity;
+  //
+  //        // single product each pass for simplicity, maybe expand later
+  //        if (side == BUY) {
+  //          var product = products.get(RNG.nextInt(products.size()));
+  //          validatedProducts.add(product);
+  //          // determine qty from trader's current spending balance
+  //          long price = product.getPrice();
+  //          long affordableShares = trader.getAccount().getAvailableBalance() / price;
+  //          // cap at 100;
+  //          generatedQuantity =
+  //              affordableShares > 0 ? RNG.nextLong(1, Math.min(affordableShares, 100) + 1) : 1;
+  //        } else { // SELLS
+  //          Map<Product, Holding> ownedHoldings;
+  //          List<Product> ownedProducts;
+  //          ReentrantLock traderLock = traderLocks.get(trader.getId() - 1);
+  //          traderLock.lock();
+  //          try {
+  //            ownedHoldings = trader.getAccount().getPortfolio().getHoldings();
+  //            ownedProducts = new ArrayList<>(ownedHoldings.keySet());
+  //          } finally {
+  //            traderLock.unlock();
+  //          }
+  //          // if trader owns nothing - skip
+  //          if (ownedHoldings.isEmpty()) {
+  //            continue;
+  //          } else {
+  //            // add only one single-product, sell order per cycle, with varying quantities to
+  // sell,
+  //            // avg less than 1/3 of total holding
+  //
+  //            var randomProduct = ownedProducts.get(RNG.nextInt(ownedProducts.size()));
+  //            var holding = trader.getAccount().getPortfolio().getHoldings().get(randomProduct);
+  //            long productQuantity = holding != null ? holding.getQuantity() : 0;
+  //            if (productQuantity == 0) continue;
+  //
+  //            var sellQtyCap = Math.max(1L, productQuantity / 3L);
+  //            var qtyToSell = RNG.nextLong(1, sellQtyCap + 1);
+  //
+  //            // select random holding
+  //            validatedProducts.add(randomProduct);
+  //            generatedQuantity = qtyToSell;
+  //          }
+  //        }
+  //        Order order = new Order(trader, side);
+  //        order.addAllProducts(new ArrayList<>(validatedProducts));
+  //        order.setQuantity(generatedQuantity);
+  //        try {
+  //          generatedOrders.put(order);
+  //        } catch (InterruptedException ex) {
+  //          Thread.currentThread().interrupt();
+  //        }
+  //      }
+  //    };
+  //  }
 
   public Runnable placeOrder() {
     return () -> {
@@ -288,14 +317,16 @@ public class OrderPipeline extends AbstractSimulationStage {
         traderLock.lock();
         try {
           Account account = order.getTrader().getAccount();
+          Portfolio portfolio = account.getPortfolio();
           if (order.side().equals(BUY)) {
             account.decreaseReservedBalance(order.getOrderPrice());
             // add new holding if not owned or increase an existing one's qty
             for (var p : order.getProducts()) {
-              if (account.getPortfolio().owns(p)) {
-                account.getPortfolio().increaseHoldingQuantity(p, order.getQuantity());
+              if (portfolio.owns(p)) {
+                var holding = portfolio.getHoldings().get(p);
+                holding.addShares(order.getQuantity(), p.getPrice());
               } else {
-                account.getPortfolio().addHolding(p, order.getQuantity());
+                portfolio.addHolding(p, order.getQuantity());
               }
             }
           } else { // sell

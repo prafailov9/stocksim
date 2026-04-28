@@ -19,7 +19,10 @@ public class Main {
     int priceBound = 100; // dollars
 
     Market market = Generator.generateMarket(productCount, priceBound);
-    List<Trader> traders = Generator.generateTraders(traderCount);
+
+    // sets initial trading behavior. "true" -> random order generation, regardless of trader type
+    boolean onlyNoise = false;
+    List<Trader> traders = Generator.generateTraders(traderCount, onlyNoise);
     Generator.generatePortfolios(traders, new ArrayList<>(market.getAvailableProducts()));
 
     log.info("Built market and traders.");
@@ -27,7 +30,7 @@ public class Main {
 
     // start sim
     StockMarketSimulation simulation = new StockMarketSimulation(market, traders);
-    log.info("Starting sim for {} seconds...", TOTAL_RUNTIME_MS);
+    log.info("Starting sim for {} seconds...", TOTAL_RUNTIME_MS / 1000);
     simulation.run();
     try {
       Thread.sleep(TOTAL_RUNTIME_MS);

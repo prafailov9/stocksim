@@ -31,7 +31,7 @@ public class Generator {
   }
 
   // generates its own buying power
-  static List<Trader> generateTraders(int total) {
+  static List<Trader> generateTraders(int total, boolean onlyNoise) {
     List<Trader> traders = new ArrayList<>();
 
     for (int i = 1; i <= total; i++) {
@@ -39,8 +39,8 @@ public class Generator {
       float buyPowerChance = RNG.nextFloat();
       var range = getRange(buyPowerChance);
       var startingBalance = RNG.nextLong(range.min, range.max + 1);
-
-      traders.add(new Trader(startingBalance, range.tier, generateTraderType()));
+      var traderType = onlyNoise ? TraderType.NOISE : generateTraderType();
+      traders.add(new Trader(startingBalance, range.tier, traderType));
     }
 
     return traders;
