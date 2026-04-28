@@ -9,6 +9,7 @@ import static com.ntros.InitialWealthTier.WHALE;
 import com.ntros.simulation.model.Market;
 import com.ntros.simulation.model.Product;
 import com.ntros.simulation.model.Trader;
+import com.ntros.simulation.model.TraderType;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -39,10 +40,21 @@ public class Generator {
       var range = getRange(buyPowerChance);
       var startingBalance = RNG.nextLong(range.min, range.max + 1);
 
-      traders.add(new Trader(startingBalance, range.tier));
+      traders.add(new Trader(startingBalance, range.tier, generateTraderType()));
     }
 
     return traders;
+  }
+
+  private static TraderType generateTraderType() {
+    float roll = RNG.nextFloat();
+    if (roll < 0.60f) {
+      return TraderType.NOISE;
+    }
+    if (roll < 0.90f) {
+      return TraderType.MOMENTUM;
+    }
+    return TraderType.LONG_TERM;
   }
 
   static void generatePortfolios(List<Trader> traders, List<Product> products) {
