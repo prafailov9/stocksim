@@ -59,7 +59,7 @@ public class SimulationControl implements Control {
     for (var t : processors) t.start();
     for (var t : pricers) t.start();
     ticker.start();
-    economist.start();
+    //    economist.start();
   }
 
   @Override
@@ -67,7 +67,7 @@ public class SimulationControl implements Control {
     token.cancel();
     stopOrdering();
     stopPricing();
-    stopEconomy();
+    //    stopEconomy();
     stopMarketDisplay();
   }
 

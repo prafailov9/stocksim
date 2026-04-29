@@ -30,7 +30,6 @@ public class OrderPipeline extends AbstractSimulationStage {
 
   private final OrderGenerationStrategy strategies;
 
-  private final List<Product> products;
   private final List<Trader> traders;
   private final List<ReentrantLock> traderLocks;
   private final List<Object> pricingLocks;
@@ -43,7 +42,6 @@ public class OrderPipeline extends AbstractSimulationStage {
     super(context);
     strategies = new OrderGenerationStrategy(context);
 
-    products = context.availableProducts();
     traders = context.traders();
     traderLocks = context.traderLocks();
     pricingLocks = context.pricingLocks();
@@ -61,6 +59,8 @@ public class OrderPipeline extends AbstractSimulationStage {
     placements.put(POISON);
   }
 
+
+  // TODO: currently, SELLS generation does placer validation. Remove it.
   public Runnable generateOrder(CancellationToken cancellationToken) {
     return () -> {
       while (!cancellationToken.isCancelled()) {

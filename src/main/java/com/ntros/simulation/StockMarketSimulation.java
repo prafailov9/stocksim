@@ -26,8 +26,8 @@ public class StockMarketSimulation {
   private static final int PROCESSORS = 4;
   private static final int PRICERS = 3;
 
-  private static final int MAX_TOP_GAINERS = 50;
-  private static final int MAX_TOP_LOSERS = 50;
+  private static final int MAX_TOP_GAINERS = 100;
+  private static final int MAX_TOP_LOSERS = 100;
   private final SimulationControl control;
 
 

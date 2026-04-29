@@ -10,8 +10,6 @@ import com.ntros.simulation.model.PriceFlow;
 import com.ntros.simulation.model.Product;
 import com.ntros.simulation.model.Side;
 import com.ntros.simulation.model.Trader;
-import com.ntros.simulation.queue.BoundedMinHeap;
-import com.ntros.simulation.queue.LinkedBoundedQueue;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -20,90 +18,118 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class OrderGenerationStrategy {
   private final Random RNG = new Random();
   private static final float BUY_CHANCE = 0.50f;
+  private static final long QUANTITY_MAX = 100;
 
   private final SimulationContext context;
 
   private final List<Product> products;
-  private final List<Trader> traders;
   private final List<ReentrantLock> traderLocks;
-  private final List<Object> pricingLocks;
-  private final LinkedBoundedQueue<Order> generatedOrders;
-  private final LinkedBoundedQueue<Order> placements;
-  private final AtomicLong processedOrdersCount;
-  private final Map<Integer, PriceFlow> priceFlows;
 
   public OrderGenerationStrategy(SimulationContext context) {
     this.context = context;
 
     products = context.availableProducts();
-    traders = context.traders();
     traderLocks = context.traderLocks();
-    pricingLocks = context.pricingLocks();
-    generatedOrders = context.generatedOrders();
-    placements = context.placements();
-    processedOrdersCount = context.processedCount();
-    priceFlows = context.priceFlows();
   }
 
   // random generation
+  //  public Order noiseStrat(Trader trader) {
+  //    var side = RNG.nextFloat() < 0.50f ? BUY : SELL;
+  //    Set<Product> generatedProducts = new HashSet<>();
+  //    long generatedQuantity;
+  //
+  //    // single product each pass for simplicity, maybe expand later
+  //    if (side == BUY) {
+  //      var product = products.get(RNG.nextInt(products.size()));
+  //      generatedProducts.add(product);
+  //      // determine qty from trader's current spending balance
+  //      long price = product.getPrice();
+  //      long affordableShares = trader.getAccount().getAvailableBalance() / price;
+  //      // cap at 100;
+  //      generatedQuantity =
+  //          affordableShares > 0 ? RNG.nextLong(1, Math.min(affordableShares, QUANTITY_MAX) + 1) :
+  // 1;
+  //    } else { // SELLS
+  //      Map<Product, Holding> ownedHoldings;
+  //      List<Product> ownedProducts;
+  //      ReentrantLock traderLock = traderLocks.get(trader.getId() - 1);
+  //      traderLock.lock();
+  //      try {
+  //        var holdings = trader.getAccount().getPortfolio().getHoldings();
+  //        // if trader owns nothing - skip
+  //        if (holdings.isEmpty()) {
+  //          return null;
+  //        }
+  //        // copy
+  //        ownedHoldings = new HashMap<>(holdings);
+  //        ownedProducts = new ArrayList<>(ownedHoldings.keySet());
+  //      } finally {
+  //        traderLock.unlock();
+  //      }
+  //
+  //      // add only one single-product, sell order per cycle, with varying quantities to sell,
+  //      // avg less than 1/3 of total holding
+  //
+  //      var randomProduct = ownedProducts.get(RNG.nextInt(ownedProducts.size()));
+  //      var holding = trader.getAccount().getPortfolio().getHoldings().get(randomProduct);
+  //      // force 1-qty sell
+  //      long ownedQuantity = holding != null ? holding.getQuantity() : 0;
+  //
+  //      var sellQtyCap = Math.max(1L, ownedQuantity / 4L);
+  //      var qtyToSell = RNG.nextLong(1, sellQtyCap + 1);
+  //
+  //      // select random holding
+  //      generatedProducts.add(randomProduct);
+  //      generatedQuantity = qtyToSell;
+  //    }
+  //    Order order = new Order(trader, side);
+  //    order.addAllProducts(new ArrayList<>(generatedProducts));
+  //    order.setQuantity(generatedQuantity);
+  //    return order;
+  //  }
   public Order noiseStrat(Trader trader) {
     var side = RNG.nextFloat() < 0.50f ? BUY : SELL;
-    Set<Product> validatedProducts = new HashSet<>();
-    long generatedQuantity;
 
-    // single product each pass for simplicity, maybe expand later
     if (side == BUY) {
       var product = products.get(RNG.nextInt(products.size()));
-      validatedProducts.add(product);
-      // determine qty from trader's current spending balance
-      long price = product.getPrice();
-      long affordableShares = trader.getAccount().getAvailableBalance() / price;
-      // cap at 100;
-      generatedQuantity =
-          affordableShares > 0 ? RNG.nextLong(1, Math.min(affordableShares, 100) + 1) : 1;
-    } else { // SELLS
-      Map<Product, Holding> ownedHoldings;
+      // balance read is a hint — placer validates under lock
+      long affordableShares = trader.getAccount().getAvailableBalance() / product.getPrice();
+      long qty =
+          affordableShares > 0 ? RNG.nextLong(1, Math.min(affordableShares, QUANTITY_MAX) + 1) : 1;
+      Order order = new Order(trader, BUY);
+      order.addProduct(product);
+      order.setQuantity(qty);
+      return order;
+    } else {
+      Map<Product, Holding> snapshot;
       List<Product> ownedProducts;
       ReentrantLock traderLock = traderLocks.get(trader.getId() - 1);
       traderLock.lock();
       try {
-        ownedHoldings = trader.getAccount().getPortfolio().getHoldings();
-        ownedProducts = new ArrayList<>(ownedHoldings.keySet());
+        var holdings = trader.getAccount().getPortfolio().getHoldings();
+        if (holdings.isEmpty()) return null;
+        snapshot = new HashMap<>(holdings);
+        ownedProducts = new ArrayList<>(holdings.keySet());
       } finally {
         traderLock.unlock();
       }
-      // if trader owns nothing - skip
-      if (ownedHoldings.isEmpty()) {
-        return null;
-      } else {
-        // add only one single-product, sell order per cycle, with varying quantities to sell,
-        // avg less than 1/3 of total holding
 
-        var randomProduct = ownedProducts.get(RNG.nextInt(ownedProducts.size()));
-        var holding = trader.getAccount().getPortfolio().getHoldings().get(randomProduct);
-        long ownedQuantity = holding != null ? holding.getQuantity() : 0;
-        if (ownedQuantity == 0) {
-          return null;
-        }
+      var randomProduct = ownedProducts.get(RNG.nextInt(ownedProducts.size()));
+      long ownedQty = snapshot.getOrDefault(randomProduct, new Holding(0, 0)).getQuantity();
+      // qty is a hint — placer will clamp to actual current quantity under lock
+      long sellQtyCap = Math.max(1L, ownedQty / 4L);
+      long qty = RNG.nextLong(1, sellQtyCap + 1);
 
-        var sellQtyCap = Math.max(1L, ownedQuantity / 3L);
-        var qtyToSell = RNG.nextLong(1, sellQtyCap + 1);
-
-        // select random holding
-        validatedProducts.add(randomProduct);
-        generatedQuantity = qtyToSell;
-      }
+      Order order = new Order(trader, SELL);
+      order.addProduct(randomProduct);
+      order.setQuantity(qty);
+      return order;
     }
-    Order order = new Order(trader, side);
-    order.addAllProducts(new ArrayList<>(validatedProducts));
-    order.setQuantity(generatedQuantity);
-    return order;
   }
 
   // traders follow high-moving stock
