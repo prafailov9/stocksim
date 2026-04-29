@@ -25,7 +25,7 @@ public enum TraderType {
    * <pre>
    *     Observes price trend direction per product before deciding:
    *     - **On BUY**: selects from products with positive recent delta (trending up). Willing to buy even at higher prices if trend is strong. Larger quantity when trend is stronger.
-   *     - **On SELL**: preferentially exits positions in products with negative recent delta (trending down). More aggressive — sells larger fraction of holding than noise traders.
+   *     - **On SELL**: preferentially exits positions in products with negative recent delta (trending down). More aggressive, sells larger fraction of holding than noise traders.
    *     - **Effect**: amplifies existing trends. Rising stocks rise faster, falling stocks fall faster. Creates the momentum effect observed in real markets.
    *     </pre>
    */

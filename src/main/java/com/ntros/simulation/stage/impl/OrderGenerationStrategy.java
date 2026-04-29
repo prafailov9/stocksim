@@ -97,7 +97,7 @@ public class OrderGenerationStrategy {
 
     if (side == BUY) {
       var product = products.get(RNG.nextInt(products.size()));
-      // balance read is a hint — placer validates under lock
+      // balance read is a hint, placer validates under lock
       long affordableShares = trader.getAccount().getAvailableBalance() / product.getPrice();
       long qty =
           affordableShares > 0 ? RNG.nextLong(1, Math.min(affordableShares, QUANTITY_MAX) + 1) : 1;
@@ -121,7 +121,7 @@ public class OrderGenerationStrategy {
 
       var randomProduct = ownedProducts.get(RNG.nextInt(ownedProducts.size()));
       long ownedQty = snapshot.getOrDefault(randomProduct, new Holding(0, 0)).getQuantity();
-      // qty is a hint — placer will clamp to actual current quantity under lock
+      // qty is a hint, placer will clamp to actual current quantity under lock
       long sellQtyCap = Math.max(1L, ownedQty / 4L);
       long qty = RNG.nextLong(1, sellQtyCap + 1);
 
@@ -222,7 +222,7 @@ public class OrderGenerationStrategy {
         productToSell = ownedList.get(RNG.nextInt(ownedList.size()));
       }
 
-      // momentum traders sell aggressively — up to half the position
+      // momentum traders sell aggressively, up to half the position
       long currentQty = ownedSnapshot.get(productToSell).getQuantity();
       quantityForOrder = Math.max(1, currentQty / 2);
       productForOrder = productToSell;
@@ -234,7 +234,7 @@ public class OrderGenerationStrategy {
   }
 
   public Order longTermStrat(Trader trader) {
-    // structural buy bias — 80% buy, 20% sell
+    // structural buy bias: 80% buy, 20% sell
     Side side = RNG.nextFloat() < 0.80f ? BUY : SELL;
 
     if (side.equals(BUY)) {
@@ -251,7 +251,7 @@ public class OrderGenerationStrategy {
       order.setQuantity(qty);
       return order;
     } else {
-      // only sell on significant loss — check holdings for panic threshold
+      // only sell on significant loss, check holdings for panic threshold
       ReentrantLock lock = traderLocks.get(trader.getId() - 1);
       lock.lock();
       Map<Product, Holding> snapshot;
