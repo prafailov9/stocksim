@@ -87,10 +87,12 @@ public class OrderGenerationStrategy {
 
         var randomProduct = ownedProducts.get(RNG.nextInt(ownedProducts.size()));
         var holding = trader.getAccount().getPortfolio().getHoldings().get(randomProduct);
-        long productQuantity = holding != null ? holding.getQuantity() : 0;
-        if (productQuantity == 0) return null;
+        long ownedQuantity = holding != null ? holding.getQuantity() : 0;
+        if (ownedQuantity == 0) {
+          return null;
+        }
 
-        var sellQtyCap = Math.max(1L, productQuantity / 3L);
+        var sellQtyCap = Math.max(1L, ownedQuantity / 3L);
         var qtyToSell = RNG.nextLong(1, sellQtyCap + 1);
 
         // select random holding
@@ -111,27 +113,24 @@ public class OrderGenerationStrategy {
     Product productForOrder;
     long quantityForOrder;
     if (side.equals(BUY)) {
-      // topMovers contains highest deltas for current pricing cycle
-      List<PriceFlow> topMovers = context.marketSnapshot().getGainers();
+      // contains highest deltas for current pricing cycle
+      List<PriceFlow> topGainers = context.marketSnapshot().getGainers();
 
       // fallback to random generation if no high-moving products this cycle
-      if (topMovers.isEmpty()) {
+      if (topGainers.isEmpty()) {
         return noiseStrat(trader);
       }
 
       // highest delta is at the end of the heap
-      PriceFlow topFlow = topMovers.getLast();
+      int idx = RNG.nextInt(topGainers.size());
+      PriceFlow topFlow = topGainers.get(idx);
       productForOrder = context.availableProducts().get(topFlow.getProductId() - 1);
       // shares to buy
       long affordableShares =
           trader.getAccount().getAvailableBalance() / productForOrder.getPrice();
-      long baseQuantity = 1;
       quantityForOrder =
           generateQuantityToBuy(
-              baseQuantity,
-              affordableShares,
-              Math.abs(topFlow.getDelta()),
-              topFlow.getCurrentPrice());
+              affordableShares, Math.abs(topFlow.getDelta()), topFlow.getCurrentPrice());
     } else { // SELL branch
       ReentrantLock traderLock = traderLocks.get(trader.getId() - 1);
       traderLock.lock();
@@ -143,6 +142,29 @@ public class OrderGenerationStrategy {
       }
       if (ownedSnapshot.isEmpty()) {
         return null;
+      }
+
+      // 30% chance of profit-taking sell regardless of trend
+      if (RNG.nextFloat() < 0.30f) {
+        // find the holding with the highest unrealized gain
+        // sell half of it
+        Product bestGainer =
+            ownedSnapshot.entrySet().stream()
+                .filter(e -> e.getValue().getAvgCost() > 0)
+                .filter(e -> e.getKey().getPrice() > e.getValue().getAvgCost())
+                .max(
+                    Comparator.comparingLong(
+                        e -> e.getKey().getPrice() - e.getValue().getAvgCost()))
+                .map(Map.Entry::getKey)
+                .orElse(null);
+
+        if (bestGainer != null) {
+          long qty = Math.max(1, ownedSnapshot.get(bestGainer).getQuantity() / 2);
+          Order order = new Order(trader, SELL);
+          order.addProduct(bestGainer);
+          order.setQuantity(qty);
+          return order;
+        }
       }
 
       // get the current market losers snapshot
@@ -185,13 +207,61 @@ public class OrderGenerationStrategy {
     return order;
   }
 
-  private long generateQuantityToBuy(
-      long origin, long bound, long absDelta, long currentProductPrice) {
-    return Math.min(bound, origin * (1 + absDelta / currentProductPrice));
+  public Order longTermStrat(Trader trader) {
+    // structural buy bias — 80% buy, 20% sell
+    Side side = RNG.nextFloat() < 0.80f ? BUY : SELL;
+
+    if (side.equals(BUY)) {
+      // pick random product, buy small fixed quantity (1-5 shares)
+      var product = products.get(RNG.nextInt(products.size()));
+      long price = product.getPrice();
+      long affordableShares = trader.getAccount().getAvailableBalance() / price;
+      if (affordableShares == 0) {
+        return null;
+      }
+      long qty = Math.min(affordableShares, RNG.nextLong(1, 6)); // 1-5 shares
+      Order order = new Order(trader, BUY);
+      order.addProduct(product);
+      order.setQuantity(qty);
+      return order;
+    } else {
+      // only sell on significant loss — check holdings for panic threshold
+      ReentrantLock lock = traderLocks.get(trader.getId() - 1);
+      lock.lock();
+      Map<Product, Holding> snapshot;
+      try {
+        snapshot = new HashMap<>(trader.getAccount().getPortfolio().getHoldings());
+      } finally {
+        lock.unlock();
+      }
+      if (snapshot.isEmpty()) {
+        return null;
+      }
+
+      // find any holding down more than 40% from avg cost
+      for (var entry : snapshot.entrySet()) {
+        var product = entry.getKey();
+        var holding = entry.getValue();
+        long avgCost = holding.getAvgCost();
+        long currentPrice = product.getPrice();
+        if (avgCost > 0 && currentPrice < avgCost * 0.60) {
+          // panic sell - full exit
+          Order order = new Order(trader, SELL);
+          order.addProduct(product);
+          order.setQuantity(holding.getQuantity());
+          return order;
+        }
+      }
+      return null; // no panic threshold hit - hold
+    }
   }
 
-  public Order longTermStrat(Trader trader) {
-    return null;
+  private long generateQuantityToBuy(
+      long affordableShares, long absDelta, long currentProductPrice) {
+    // scale buy size: stronger trend = larger fraction of affordable shares
+    double trendStrength = (double) absDelta / currentProductPrice; // 0.0 to ~0.03
+    double fraction = 0.1 + (trendStrength * 10); // 10% to 40% of affordable
+    return Math.max(1, Math.min(affordableShares, Math.round(affordableShares * fraction)));
   }
 
   private Side rollOrderSide() {

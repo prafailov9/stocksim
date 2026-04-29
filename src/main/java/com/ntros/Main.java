@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 /** Hello world! */
 public class Main {
   private static final Logger log = LoggerFactory.getLogger(Main.class);
-  private static final int TOTAL_RUNTIME_MS = 32_000; // seconds
+  private static final int TOTAL_RUNTIME_MS = 64_000; // seconds
 
   public static void main(String[] args) {
     int traderCount = 50_000;
@@ -25,8 +25,10 @@ public class Main {
     List<Trader> traders = Generator.generateTraders(traderCount, onlyNoise);
     Generator.generatePortfolios(traders, new ArrayList<>(market.getAvailableProducts()));
 
+    String avgBalancesString = MarketUtils.getAverageBuyingPowerString(traders);
+
     log.info("Built market and traders.");
-    log.info("Average account balance: {}", MarketUtils.getAverageBuyingPower(traders));
+    log.info("Average account balance: {}", avgBalancesString);
 
     // start sim
     StockMarketSimulation simulation = new StockMarketSimulation(market, traders);
@@ -40,5 +42,7 @@ public class Main {
     // stop
     simulation.stop();
     log.info("Sim stopped");
+    log.info("Average account balance after sim: {}", MarketUtils.getAverageBuyingPowerString(traders));
+
   }
 }

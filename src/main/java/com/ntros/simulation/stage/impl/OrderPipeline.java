@@ -254,7 +254,8 @@ public class OrderPipeline extends AbstractSimulationStage {
             for (var p : order.getProducts()) {
               if (portfolio.owns(p)) {
                 var holding = portfolio.getHoldings().get(p);
-                holding.addShares(order.getQuantity(), p.getPrice());
+                long pricePerShare = order.getOrderPrice() / order.getQuantity();
+                holding.addShares(order.getQuantity(), pricePerShare);
               } else {
                 portfolio.addHolding(p, order.getQuantity());
               }

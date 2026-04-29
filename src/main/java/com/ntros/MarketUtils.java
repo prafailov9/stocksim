@@ -6,7 +6,9 @@ import com.ntros.simulation.model.Money;
 import com.ntros.simulation.model.Product;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.util.List;
+import java.util.Locale;
 
 public class MarketUtils {
 
@@ -51,10 +53,7 @@ public class MarketUtils {
   }
 
   public static long getTotalBalanceForAllTraders(List<Trader> traders) {
-    return traders.stream()
-        .map(Trader::getAccount)
-        .mapToLong(Account::getAvailableBalance)
-        .sum();
+    return traders.stream().map(Trader::getAccount).mapToLong(Account::getAvailableBalance).sum();
   }
 
   public static BigDecimal getAverageBuyingPower(List<Trader> traders) {
@@ -64,4 +63,19 @@ public class MarketUtils {
         .divide(BigDecimal.valueOf(traders.size() * 100L), 2, RoundingMode.HALF_UP);
   }
 
+  public static String getAverageBuyingPowerString(List<Trader> traders) {
+    long totalCents = getTotalBalanceForAllTraders(traders);
+
+    return formatCents(totalCents, traders.size());
+  }
+
+  public static String formatCents(long cents, int traderCount) {
+    BigDecimal amount =
+        BigDecimal.valueOf(cents)
+            .divide(
+                BigDecimal.valueOf(traderCount * 100L),
+                2,
+                RoundingMode.HALF_UP); // cents -> major unit
+    return NumberFormat.getCurrencyInstance(Locale.US).format(amount);
+  }
 }
