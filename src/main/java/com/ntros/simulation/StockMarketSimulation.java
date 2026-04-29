@@ -30,6 +30,8 @@ public class StockMarketSimulation {
   private static final int MAX_TOP_LOSERS = 50;
   private final SimulationControl control;
 
+
+  // TODO: Implement Order Book
   public StockMarketSimulation(Market market, List<Trader> traders) {
     // data
     List<Product> availableProducts = new ArrayList<>(market.getAvailableProducts());

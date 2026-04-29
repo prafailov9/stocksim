@@ -14,7 +14,7 @@ public class Main {
   private static final int TOTAL_RUNTIME_MS = 64_000; // seconds
 
   public static void main(String[] args) {
-    int traderCount = 50_000;
+    int traderCount = 100_000;
     int productCount = 8_000;
     int priceBound = 100; // dollars
 

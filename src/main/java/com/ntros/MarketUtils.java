@@ -1,5 +1,11 @@
 package com.ntros;
 
+import static com.ntros.WealthTier.AFFLUENT;
+import static com.ntros.WealthTier.HIGH_NET_WORTH;
+import static com.ntros.WealthTier.REGULAR;
+import static com.ntros.WealthTier.SMALL;
+import static com.ntros.WealthTier.WHALE;
+
 import com.ntros.simulation.model.Account;
 import com.ntros.simulation.model.Trader;
 import com.ntros.simulation.model.Money;
@@ -12,6 +18,7 @@ import java.util.Locale;
 
 public class MarketUtils {
 
+  public static final long EXPONENT = 100;
   public static final long MIN_ALLOWED_CENTS = 300;
   public static final long MIN_PRODUCT_PRICE = 1L;
   public static final long PRICE_SENSITIVITY_CENTS = 1; // max-ish 1% move per window
@@ -78,4 +85,22 @@ public class MarketUtils {
                 RoundingMode.HALF_UP); // cents -> major unit
     return NumberFormat.getCurrencyInstance(Locale.US).format(amount);
   }
+
+
+  public static WealthTier determineWealthTier(long balance) {
+    if (balance > 100 * EXPONENT && balance <= 5_000 * EXPONENT) {
+      return SMALL;
+    }
+    if (balance > 5_000 * EXPONENT && balance <= 75_000 * EXPONENT) {
+      return REGULAR;
+    }
+    if (balance > 75_000 * EXPONENT && balance <= 500_000 * EXPONENT) {
+      return AFFLUENT;
+    }
+    if (balance > 500_000 * EXPONENT && balance <= 5_000_000 * EXPONENT) {
+      return HIGH_NET_WORTH;
+    }
+    return WHALE;
+  }
+
 }

@@ -1,6 +1,6 @@
 package com.ntros;
 
-public enum InitialWealthTier {
+public enum WealthTier {
   SMALL,
   REGULAR,
   AFFLUENT,

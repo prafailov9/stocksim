@@ -1,10 +1,10 @@
 package com.ntros;
 
-import static com.ntros.InitialWealthTier.AFFLUENT;
-import static com.ntros.InitialWealthTier.HIGH_NET_WORTH;
-import static com.ntros.InitialWealthTier.REGULAR;
-import static com.ntros.InitialWealthTier.SMALL;
-import static com.ntros.InitialWealthTier.WHALE;
+import static com.ntros.WealthTier.AFFLUENT;
+import static com.ntros.WealthTier.HIGH_NET_WORTH;
+import static com.ntros.WealthTier.REGULAR;
+import static com.ntros.WealthTier.SMALL;
+import static com.ntros.WealthTier.WHALE;
 
 import com.ntros.simulation.model.Market;
 import com.ntros.simulation.model.Product;
@@ -30,7 +30,6 @@ public class Generator {
     return market;
   }
 
-  // generates its own buying power
   static List<Trader> generateTraders(int total, boolean onlyNoise) {
     List<Trader> traders = new ArrayList<>();
 
@@ -59,7 +58,7 @@ public class Generator {
 
   static void generatePortfolios(List<Trader> traders, List<Product> products) {
     for (var trader : traders) {
-      InitialWealthTier tier = trader.getWealthTier();
+      WealthTier tier = trader.getWealthTier();
 
       int ownedProductsCount = generateOwnedProductsCount(tier, products.size());
 
@@ -79,7 +78,7 @@ public class Generator {
   }
 
   /// helpers
-  private static long generateQuantity(InitialWealthTier tier, Product product) {
+  private static long generateQuantity(WealthTier tier, Product product) {
     long minPositionValue;
     long maxPositionValue;
 
@@ -122,7 +121,7 @@ public class Generator {
     return min + (long) ((max - min) * skewed);
   }
 
-  private static int generateOwnedProductsCount(InitialWealthTier tier, int productCount) {
+  private static int generateOwnedProductsCount(WealthTier tier, int productCount) {
     int count =
         switch (tier) {
           case SMALL -> RNG.nextInt(0, 5); // 0–4
@@ -171,11 +170,11 @@ public class Generator {
   }
 
   private static final class Range {
-    InitialWealthTier tier;
+    WealthTier tier;
     long min;
     long max;
 
-    Range(InitialWealthTier tier, long min, long max) {
+    Range(WealthTier tier, long min, long max) {
       this.tier = tier;
       this.min = min;
       this.max = max;
