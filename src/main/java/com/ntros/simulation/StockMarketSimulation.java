@@ -21,9 +21,9 @@ public class StockMarketSimulation {
   private static final int MAX_ALLOWED_ORDERS = 10_000_000;
   private static final int MAX_TOP_MOVERS = 10;
 
-  private static final int GENERATORS = 3;
-  private static final int PLACERS = 3;
-  private static final int PROCESSORS = 3;
+  private static final int GENERATORS = 2;
+  private static final int PLACERS = 4;
+  private static final int PROCESSORS = 4;
   private static final int PRICERS = 3;
 
   private static final int MAX_TOP_GAINERS = 50;

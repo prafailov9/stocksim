@@ -1,5 +1,6 @@
 package com.ntros.simulation.stage.impl;
 
+import com.ntros.InitialWealthTier;
 import com.ntros.simulation.SimulationContext;
 import com.ntros.simulation.model.Account;
 import com.ntros.simulation.model.Trader;
@@ -42,16 +43,21 @@ public class EconomyManager extends AbstractSimulationStage {
             continue;
           }
           try {
+            var trader = traders.get(i);
             Account account = traders.get(i).getAccount();
-            if (account.getAvailableBalance() < BALANCE_FLOOR_CENTS) {
+            // balance injection based off of trader's initial balance
+            long floor =
+                (long) (account.getInitialBalance() * tierFloorFraction(trader.getWealthTier()));
+            if (account.getAvailableBalance() < floor) {
               account.increaseAvailableBalance(BALANCE_INJECTION_CENTS);
             }
             if (account.getPortfolio().getHoldings().isEmpty()) {
               int count = RNG.nextInt(1, 6);
               for (int j = 0; j < count; j++) {
 
-                account.getPortfolio().addHolding(
-                    availableProducts.get(RNG.nextInt(availableProducts.size())), 1);
+                account
+                    .getPortfolio()
+                    .addHolding(availableProducts.get(RNG.nextInt(availableProducts.size())), 1);
               }
             }
           } finally {
@@ -59,6 +65,16 @@ public class EconomyManager extends AbstractSimulationStage {
           }
         }
       }
+    };
+  }
+
+  private float tierFloorFraction(InitialWealthTier tier) {
+    return switch (tier) {
+      case SMALL -> 0.30f; // always keep 30% of starting balance
+      case REGULAR -> 0.20f;
+      case AFFLUENT -> 0.15f;
+      case HIGH_NET_WORTH -> 0.10f;
+      case WHALE -> 0.05f;
     };
   }
 }
