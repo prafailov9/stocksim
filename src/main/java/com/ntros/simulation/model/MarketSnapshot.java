@@ -15,7 +15,7 @@ public class MarketSnapshot {
     this.topGainers =
         new BoundedMinHeap<>(gainersCap, Comparator.comparingLong(PriceFlow::getDelta));
     this.topLosers =
-        new BoundedMinHeap<>(gainersCap, Comparator.comparingLong(PriceFlow::getDelta));
+        new BoundedMinHeap<>(losersCap, Comparator.comparingLong(PriceFlow::getDelta));
   }
 
   public void offerGainer(PriceFlow priceFlow) {

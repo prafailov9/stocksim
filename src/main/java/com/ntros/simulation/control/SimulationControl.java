@@ -107,7 +107,7 @@ public class SimulationControl implements Control {
       }
     }
 
-    // wait for still-consumers to drain the queue and exit
+    // wait for still-active consumers to drain the queue and exit
     for (var t : processors) {
       try {
         t.join();

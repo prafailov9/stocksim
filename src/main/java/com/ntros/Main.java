@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 /** Hello world! */
 public class Main {
   private static final Logger log = LoggerFactory.getLogger(Main.class);
-  private static final int TOTAL_RUNTIME_MS = 64_000; // seconds
+  private static final int TOTAL_RUNTIME_MS = 72_000; // seconds
 
   public static void main(String[] args) {
     int traderCount = 100_000;
