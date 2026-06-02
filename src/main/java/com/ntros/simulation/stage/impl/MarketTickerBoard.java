@@ -5,6 +5,9 @@ import com.ntros.simulation.model.Money;
 import com.ntros.simulation.model.PriceFlow;
 import com.ntros.simulation.queue.BoundedMinHeap;
 import com.ntros.simulation.stage.AbstractSimulationStage;
+import java.text.NumberFormat;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -15,6 +18,7 @@ public class MarketTickerBoard extends AbstractSimulationStage {
   private static final int TICKER_TIMESTEP_MS = 2000;
   private final BoundedMinHeap<PriceFlow> topMovers;
   private final AtomicLong processedCount;
+  private final NumberFormat numberFormatter = NumberFormat.getNumberInstance();
 
   public MarketTickerBoard(SimulationContext context) {
     super(context);
@@ -25,11 +29,9 @@ public class MarketTickerBoard extends AbstractSimulationStage {
   public Runnable displayMarketState() {
     return () -> {
       while (true) {
-        try {
-          Thread.sleep(TICKER_TIMESTEP_MS);
-        } catch (InterruptedException ex) {
-          Thread.currentThread().interrupt();
-          break;
+
+        if (!waitForNextDisplaySlot()) {
+          return;
         }
 
         // drain top movers
@@ -57,9 +59,7 @@ public class MarketTickerBoard extends AbstractSimulationStage {
         System.out.flush();
 
         // header
-        String timestamp =
-            java.time.LocalTime.now()
-                .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
+        String timestamp = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
         System.out.printf(
             "  %-6s  %-12s  %-12s  %-10s  %-6s  %-6s  %s%n",
             "CODE", "PRICE", "DELTA", "MOVE %", "BUYS", "SELLS", "LAST UPDATE: " + timestamp);
@@ -89,8 +89,19 @@ public class MarketTickerBoard extends AbstractSimulationStage {
               arrow);
         }
         // footer
-        System.out.printf("%n  Total processed orders: %d%n", processedCount.get());
+        System.out.printf(
+            "%n  Total processed orders: %s%n", numberFormatter.format(processedCount.get()));
       }
     };
+  }
+
+  private boolean waitForNextDisplaySlot() {
+    try {
+      Thread.sleep(TICKER_TIMESTEP_MS);
+      return true;
+    } catch (InterruptedException ex) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
   }
 }
